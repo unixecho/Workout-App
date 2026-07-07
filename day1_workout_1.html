@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<title>Day 1 — Lower Body + Core</title>
+<style>
+  :root{
+    --bg:#0A0D12;
+    --bg-elev:#12161D;
+    --card:#171C24;
+    --card-border:rgba(255,255,255,0.06);
+    --hairline:rgba(255,255,255,0.08);
+    --ink:#F2F4F7;
+    --ink-dim:#9AA3AF;
+    --ink-faint:#5B6472;
+    --blue:#3D8BFD;
+    --green:#30D158;
+    --amber:#FF9F0A;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  html,body{
+    margin:0; padding:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior-y:none;
+  }
+
+  /* Ambient iOS-style background glow */
+  body::before{
+    content:"";
+    position:fixed; inset:0; z-index:-1;
+    background:
+      radial-gradient(ellipse 80% 40% at 85% -5%, rgba(61,139,253,0.13), transparent 60%),
+      radial-gradient(ellipse 70% 35% at 10% 108%, rgba(48,209,88,0.08), transparent 60%),
+      var(--bg);
+  }
+
+  body{ padding-bottom:calc(28px + var(--safe-bottom)); }
+
+  /* ---------- Header ---------- */
+  .topbar{
+    padding: calc(14px + var(--safe-top)) 20px 8px;
+    position:sticky; top:0; z-index:20;
+    background:linear-gradient(180deg, rgba(10,13,18,0.96) 78%, rgba(10,13,18,0));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  .eyebrow{
+    font-size:13px; font-weight:600; letter-spacing:0.02em;
+    color:var(--blue); text-transform:uppercase;
+  }
+  .title{
+    font-size:34px; font-weight:800; letter-spacing:-0.02em;
+    margin:2px 0 2px;
+  }
+  .subtitle{ font-size:15px; color:var(--ink-dim); font-weight:500; }
+
+  /* ---------- Progress ring ---------- */
+  .progress-block{
+    display:flex; align-items:center; gap:16px;
+    padding:18px 20px 6px;
+  }
+  .ring-wrap{ position:relative; width:64px; height:64px; flex:none; }
+  .ring-wrap svg{ width:64px; height:64px; transform:rotate(-90deg); }
+  .ring-bg{ fill:none; stroke:var(--hairline); stroke-width:6; }
+  .ring-fg{
+    fill:none; stroke:var(--green); stroke-width:6; stroke-linecap:round;
+    stroke-dasharray:175.9; stroke-dashoffset:175.9;
+    transition:stroke-dashoffset .5s ease;
+  }
+  .ring-label{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:700;
+  }
+  .progress-text{ flex:1; }
+  .progress-text .p-title{ font-size:15px; font-weight:700; }
+  .progress-text .p-sub{ font-size:13px; color:var(--ink-dim); margin-top:2px; }
+
+  /* ---------- List ---------- */
+  .list{
+    margin:14px 16px 0;
+    border-radius:16px;
+    overflow:hidden;
+    background:var(--card);
+    border:1px solid var(--card-border);
+  }
+  .row + .row{ border-top:1px solid var(--hairline); }
+
+  .row-header{
+    display:flex; align-items:center; gap:12px;
+    padding:14px 16px;
+    cursor:pointer;
+    -webkit-user-select:none; user-select:none;
+    transition:background .15s ease;
+  }
+  .row-header:active{ background:rgba(255,255,255,0.04); }
+
+  .row-icon{
+    width:34px; height:34px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:17px; flex:none;
+    background:rgba(61,139,253,0.14);
+  }
+  .row.done .row-icon{ background:rgba(48,209,88,0.16); }
+  .row.warm .row-icon, .row.cool .row-icon{ background:rgba(255,159,10,0.14); }
+
+  .row-main{ flex:1; min-width:0; }
+  .row-name{ font-size:16px; font-weight:600; letter-spacing:-0.01em; }
+  .row-meta{ font-size:13px; color:var(--ink-dim); margin-top:1px; }
+
+  .row-check{
+    width:26px; height:26px; border-radius:50%;
+    border:2px solid var(--ink-faint);
+    display:flex; align-items:center; justify-content:center;
+    flex:none; transition:all .2s ease;
+    font-size:14px; color:transparent;
+  }
+  .row.done .row-check{ background:var(--green); border-color:var(--green); color:#08240F; }
+
+  .chevron{
+    width:9px; height:9px;
+    border-right:2px solid var(--ink-faint);
+    border-bottom:2px solid var(--ink-faint);
+    transform:rotate(45deg);
+    transition:transform .3s ease;
+    flex:none; margin-left:2px;
+  }
+  .row.expanded .chevron{ transform:rotate(-135deg); }
+
+  /* ---------- Expand mechanism ---------- */
+  .content-wrap{
+    display:grid;
+    grid-template-rows:0fr;
+    transition:grid-template-rows .35s cubic-bezier(.4,0,.2,1);
+  }
+  .row.expanded .content-wrap{ grid-template-rows:1fr; }
+  .content-inner{ overflow:hidden; }
+  .content-pad{ padding:4px 16px 18px; }
+
+  /* ---------- Animation stage ---------- */
+  .stage{
+    background:
+      radial-gradient(ellipse 90% 70% at 50% 30%, rgba(61,139,253,0.07), transparent 70%),
+      var(--bg-elev);
+    border-radius:14px;
+    padding:8px 0 0;
+    margin-bottom:6px;
+  }
+  .stage svg{ width:100%; max-width:240px; height:210px; display:block; margin:0 auto; }
+  .stage-caption{
+    text-align:center; font-size:12.5px; font-weight:600;
+    color:var(--ink-dim); letter-spacing:.01em;
+    margin:2px 0 14px;
+  }
+  .stage-caption b{ color:var(--blue); font-weight:700; }
+
+  .bone{ stroke:var(--blue); stroke-width:7; stroke-linecap:round; fill:none; }
+  .bone-thin{ stroke:var(--blue); stroke-width:6; stroke-linecap:round; fill:none; }
+  .bone-ghost{ stroke:var(--blue); stroke-width:6; stroke-linecap:round; fill:none; opacity:0.35; }
+  .skull{ fill:var(--blue); }
+  .floor{ stroke:rgba(255,255,255,0.14); stroke-width:2; stroke-linecap:round; }
+  .cue-arrow{ stroke:var(--green); stroke-width:2.5; fill:none; stroke-linecap:round; opacity:.85; }
+  .cue-head{ fill:var(--green); opacity:.85; }
+  .accent{ fill:var(--green); opacity:.5; }
+  .band{ stroke:var(--amber); stroke-width:4; stroke-dasharray:5 5; }
+
+  /* ---------- Info blocks ---------- */
+  .info{
+    font-size:14px; line-height:1.5; border-radius:12px;
+    padding:12px 14px; margin-bottom:10px;
+  }
+  .info b{ font-weight:700; }
+  .info.tip{ background:rgba(61,139,253,0.10); color:#CFE3FF; }
+  .info.tip b{ color:var(--blue); }
+  .info.warn{ background:rgba(255,159,10,0.10); color:#FFE3B8; }
+  .info.warn b{ color:var(--amber); }
+
+  /* ---------- Stepper ---------- */
+  .tracker{
+    background:var(--bg-elev);
+    border-radius:14px;
+    padding:14px;
+    margin-bottom:12px;
+  }
+  .set-dots{ display:flex; gap:6px; justify-content:center; margin-bottom:10px; }
+  .set-dot{
+    width:7px; height:7px; border-radius:50%;
+    background:var(--ink-faint);
+    transition:background .2s ease;
+  }
+  .set-dot.active{ background:var(--blue); }
+  .set-dot.filled{ background:var(--green); }
+
+  .rep-row{ display:flex; align-items:center; justify-content:center; gap:22px; }
+  .rep-num{ font-size:38px; font-weight:800; font-variant-numeric:tabular-nums; min-width:88px; text-align:center; }
+  .rep-num span{ font-size:19px; color:var(--ink-faint); font-weight:600; }
+
+  .step-btn{
+    width:44px; height:44px; border-radius:50%;
+    border:none; background:rgba(255,255,255,0.08);
+    color:var(--ink); font-size:22px; font-weight:600;
+    display:flex; align-items:center; justify-content:center;
+    -webkit-user-select:none; user-select:none;
+  }
+  .step-btn:active{ background:rgba(255,255,255,0.16); transform:scale(0.94); }
+  .step-btn.plus{ background:rgba(61,139,253,0.18); color:var(--blue); }
+  .step-btn.plus:active{ background:rgba(61,139,253,0.3); }
+
+  .set-label{ text-align:center; font-size:12px; color:var(--ink-dim); margin-top:10px; font-weight:600; letter-spacing:.02em; }
+
+  .timer-num{ font-size:38px; font-weight:800; font-variant-numeric:tabular-nums; }
+  .timer-btn-row{ display:flex; gap:10px; justify-content:center; margin-top:12px; }
+  .pill-btn{
+    padding:10px 18px; border-radius:999px; border:none;
+    background:rgba(61,139,253,0.16); color:var(--blue);
+    font-size:14px; font-weight:700;
+  }
+  .pill-btn:active{ background:rgba(61,139,253,0.28); transform:scale(0.96); }
+
+  .complete-btn{
+    width:100%; padding:14px; border:none; border-radius:12px;
+    background:rgba(255,255,255,0.06); color:var(--ink);
+    font-size:15px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .complete-btn:active{ transform:scale(0.98); }
+  .row.done .complete-btn{ background:rgba(48,209,88,0.16); color:var(--green); }
+
+  .footer-note{
+    margin:22px 20px 0; font-size:12.5px; line-height:1.6; color:var(--ink-faint); text-align:center;
+  }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="eyebrow">Home Recovery Plan</div>
+    <div class="title">Day 1</div>
+    <div class="subtitle">Lower Body + Core · ~45 min</div>
+  </div>
+
+  <div class="progress-block">
+    <div class="ring-wrap">
+      <svg viewBox="0 0 64 64">
+        <circle class="ring-bg" cx="32" cy="32" r="28"></circle>
+        <circle class="ring-fg" id="ringFg" cx="32" cy="32" r="28"></circle>
+      </svg>
+      <div class="ring-label" id="ringLabel">0/7</div>
+    </div>
+    <div class="progress-text">
+      <div class="p-title">Today's session</div>
+      <div class="p-sub" id="progressSub">Tap an exercise to begin</div>
+    </div>
+  </div>
+
+  <div class="list" id="list">
+
+    <!-- Warm-up -->
+    <div class="row warm" data-row="warmup">
+      <div class="row-header" data-toggle="warmup">
+        <div class="row-icon">🚶</div>
+        <div class="row-main">
+          <div class="row-name">Walking Warm-up</div>
+          <div class="row-meta">10–15 min</div>
+        </div>
+        <div class="row-check">✓</div>
+        <div class="chevron"></div>
+      </div>
+      <div class="content-wrap"><div class="content-inner"><div class="content-pad">
+        <div class="info tip"><b>Form —</b> Easy pace, shoulders relaxed, arms swing naturally. You should be able to hold a conversation the whole time.</div>
+        <button class="complete-btn" data-complete="warmup">Mark Complete</button>
+      </div></div></div>
+    </div>
+
+    <!-- Squats -->
+    <div class="row" data-row="squats">
+      <div class="row-header" data-toggle="squats">
+        <div class="row-icon">🦵</div>
+        <div class="row-main">
+          <div class="row-name">Bodyweight Squats</div>
+          <div class="row-meta">3 sets × 12–15 reps</div>
+        </div>
+        <div class="row-check">✓</div>
+        <div class="chevron"></div>
+      </div>
+      <div class="content-wrap"><div class="content-inner"><div class="content-pad">
+
+        <div class="stage">
+          <!-- Side view. Hips travel back + down, chest stays up, arms reach forward to counterbalance. -->
+          <svg viewBox="0 0 220 220">
+            <line class="floor" x1="46" y1="203" x2="186" y2="203"/>
+            <!-- foot (planted, static) -->
+            <line class="bone-thin" x1="98" y1="199" x2="138" y2="199"/>
+
+            <!-- lower leg: ankle -> knee -->
+            <line class="bone" x1="110" y1="196" x2="112" y2="157">
+              <animate attributeName="x2" values="112;134;134;112" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y2" values="157;161;161;157" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+            </line>
+            <!-- upper leg: knee -> hip -->
+            <line class="bone" x1="112" y1="157" x2="110" y2="117">
+              <animate attributeName="x1" values="112;134;134;112" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y1" values="157;161;161;157" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="x2" values="110;92;92;110" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y2" values="117;157;157;117" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+            </line>
+            <!-- torso: hip -> shoulder (stays upright-ish) -->
+            <line class="bone" x1="110" y1="117" x2="112" y2="63">
+              <animate attributeName="x1" values="110;92;92;110" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y1" values="117;157;157;117" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="x2" values="112;105;105;112" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y2" values="63;111;111;63" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+            </line>
+            <!-- head -->
+            <circle class="skull" r="13" cx="114" cy="46">
+              <animate attributeName="cx" values="114;109;109;114" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="cy" values="46;94;94;46" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+            </circle>
+            <!-- arm: hangs, then reaches forward for balance -->
+            <line class="bone-thin" x1="112" y1="72" x2="112" y2="112">
+              <animate attributeName="x1" values="112;105;105;112" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y1" values="72;118;118;72" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="x2" values="112;152;152;112" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y2" values="112;116;116;112" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+            </line>
+            <!-- cue: hips back + down -->
+            <path class="cue-arrow" d="M 74 118 Q 62 132 66 150"/>
+            <path class="cue-head" d="M 66 150 l -5 -8 l 9 -1 z"/>
+          </svg>
+          <div class="stage-caption">Hips <b>back and down</b> · chest up · heels planted</div>
+        </div>
+
+        <div class="tracker">
+          <div class="set-dots" data-dots="squats">
+            <div class="set-dot"></div><div class="set-dot"></div><div class="set-dot"></div>
+          </div>
+          <div class="rep-row">
+            <button class="step-btn" data-step="squats" data-dir="-1">−</button>
+            <div class="rep-num"><span id="squats-rep">0</span><span> / 15</span></div>
+            <button class="step-btn plus" data-step="squats" data-dir="1">+</button>
+          </div>
+          <div class="set-label" id="squats-label">Set 1 of 3</div>
+        </div>
+
+        <div class="info tip"><b>Form —</b> Sit back like reaching for a chair behind you. Weight in your heels, knees tracking over toes. Down until thighs are parallel, then drive up.</div>
+        <div class="info warn"><b>Broken arm —</b> Let the left arm reach forward for balance. Right arm stays relaxed — never push off anything with the right hand.</div>
+
+        <button class="complete-btn" data-complete="squats">Mark Complete</button>
+      </div></div></div>
+    </div>
+
+    <!-- Glute Bridges -->
+    <div class="row" data-row="bridges">
+      <div class="row-header" data-toggle="bridges">
+        <div class="row-icon">🌉</div>
+        <div class="row-main">
+          <div class="row-name">Glute Bridges</div>
+          <div class="row-meta">3 sets × 12–15 reps</div>
+        </div>
+        <div class="row-check">✓</div>
+        <div class="chevron"></div>
+      </div>
+      <div class="content-wrap"><div class="content-inner"><div class="content-pad">
+
+        <div class="stage">
+          <!-- Side view, lying down. Shoulders + feet stay grounded, hips rise until body forms a straight line. -->
+          <svg viewBox="0 0 220 220">
+            <line class="floor" x1="24" y1="196" x2="196" y2="196"/>
+            <!-- head resting -->
+            <circle class="skull" cx="42" cy="180" r="12"/>
+            <!-- torso: shoulder -> hip (hip rises) -->
+            <line class="bone" x1="60" y1="186" x2="118" y2="186">
+              <animate attributeName="y2" values="186;152;152;186" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+            </line>
+            <!-- upper leg: hip -> knee (knee fixed) -->
+            <line class="bone" x1="118" y1="186" x2="154" y2="144">
+              <animate attributeName="y1" values="186;152;152;186" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+            </line>
+            <!-- lower leg: knee -> ankle (static, shin vertical) -->
+            <line class="bone" x1="154" y1="144" x2="158" y2="190"/>
+            <!-- foot -->
+            <line class="bone-thin" x1="146" y1="192" x2="176" y2="192"/>
+            <!-- arm resting on floor -->
+            <line class="bone-thin" x1="70" y1="191" x2="106" y2="191" opacity="0.6"/>
+            <!-- glute highlight rides the hip -->
+            <ellipse class="accent" cx="118" cy="180" rx="15" ry="11">
+              <animate attributeName="cy" values="180;148;148;180" keyTimes="0;0.4;0.6;1" dur="3s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+            </ellipse>
+            <!-- cue: hips up -->
+            <path class="cue-arrow" d="M 118 132 L 118 112"/>
+            <path class="cue-head" d="M 118 108 l -6 9 l 12 0 z"/>
+          </svg>
+          <div class="stage-caption">Drive hips <b>up</b> · squeeze at the top · shoulders stay down</div>
+        </div>
+
+        <div class="tracker">
+          <div class="set-dots" data-dots="bridges">
+            <div class="set-dot"></div><div class="set-dot"></div><div class="set-dot"></div>
+          </div>
+          <div class="rep-row">
+            <button class="step-btn" data-step="bridges" data-dir="-1">−</button>
+            <div class="rep-num"><span id="bridges-rep">0</span><span> / 15</span></div>
+            <button class="step-btn plus" data-step="bridges" data-dir="1">+</button>
+          </div>
+          <div class="set-label" id="bridges-label">Set 1 of 3</div>
+        </div>
+
+        <div class="info tip"><b>Form —</b> Feet flat, hip-width apart, heels close to your glutes. Push through the heels and lift until shoulders–hips–knees form one straight line. Hold 1 second, lower slowly.</div>
+        <div class="info warn"><b>Arm position —</b> Arms rest at your sides, palms down for light balance — never pushing through the right hand.</div>
+
+        <button class="complete-btn" data-complete="bridges">Mark Complete</button>
+      </div></div></div>
+    </div>
+
+    <!-- Reverse Lunges -->
+    <div class="row" data-row="lunges">
+      <div class="row-header" data-toggle="lunges">
+        <div class="row-icon">🚶‍♂️</div>
+        <div class="row-main">
+          <div class="row-name">Reverse Lunges</div>
+          <div class="row-meta">3 sets × 10 per leg</div>
+        </div>
+        <div class="row-check">✓</div>
+        <div class="chevron"></div>
+      </div>
+      <div class="content-wrap"><div class="content-inner"><div class="content-pad">
+
+        <div class="stage">
+          <!-- Side view. One leg steps BACK, both knees bend to 90°, torso stays tall, then return to standing. -->
+          <svg viewBox="0 0 220 220">
+            <line class="floor" x1="30" y1="203" x2="192" y2="203"/>
+            <!-- front foot (planted) -->
+            <line class="bone-thin" x1="106" y1="199" x2="142" y2="199"/>
+
+            <!-- front lower leg: ankle -> knee (shin stays vertical) -->
+            <line class="bone" x1="120" y1="196" x2="118" y2="158">
+              <animate attributeName="x2" values="118;124;124;118" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y2" values="158;160;160;158" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+            </line>
+            <!-- front upper leg: knee -> hip (thigh becomes horizontal) -->
+            <line class="bone" x1="118" y1="158" x2="116" y2="118">
+              <animate attributeName="x1" values="118;124;124;118" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y1" values="158;160;160;158" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="x2" values="116;96;96;116" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y2" values="118;152;152;118" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+            </line>
+            <!-- back upper leg: hip -> back knee (steps back) -->
+            <line class="bone" x1="116" y1="118" x2="112" y2="158" opacity="0.8">
+              <animate attributeName="x1" values="116;96;96;116" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y1" values="118;152;152;118" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="x2" values="112;72;72;112" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y2" values="158;172;172;158" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+            </line>
+            <!-- back lower leg: knee -> toes (knee hovers above floor) -->
+            <line class="bone" x1="112" y1="158" x2="114" y2="196" opacity="0.8">
+              <animate attributeName="x1" values="112;72;72;112" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y1" values="158;172;172;158" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="x2" values="114;56;56;114" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y2" values="196;194;194;196" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+            </line>
+            <!-- torso stays tall -->
+            <line class="bone" x1="116" y1="118" x2="118" y2="64">
+              <animate attributeName="x1" values="116;96;96;116" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y1" values="118;152;152;118" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="x2" values="118;98;98;118" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y2" values="64;98;98;64" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+            </line>
+            <!-- head -->
+            <circle class="skull" r="13" cx="120" cy="47">
+              <animate attributeName="cx" values="120;100;100;120" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="cy" values="47;81;81;47" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+            </circle>
+            <!-- cue: back foot steps back -->
+            <path class="cue-arrow" d="M 100 210 L 66 210" transform="translate(0,-28)"/>
+            <path class="cue-head" d="M 62 182 l 9 -5 l 0 10 z"/>
+          </svg>
+          <div class="stage-caption">Step <b>back</b> · both knees to 90° · torso tall</div>
+        </div>
+
+        <div class="tracker">
+          <div class="set-dots" data-dots="lunges">
+            <div class="set-dot"></div><div class="set-dot"></div><div class="set-dot"></div>
+          </div>
+          <div class="rep-row">
+            <button class="step-btn" data-step="lunges" data-dir="-1">−</button>
+            <div class="rep-num"><span id="lunges-rep">0</span><span> / 20</span></div>
+            <button class="step-btn plus" data-step="lunges" data-dir="1">+</button>
+          </div>
+          <div class="set-label" id="lunges-label">Set 1 of 3 · 20 = 10/leg</div>
+        </div>
+
+        <div class="info tip"><b>Form —</b> From standing, step one foot back and lower straight down until both knees hit 90°. The back knee hovers just above the floor. Push through the front heel to stand, then switch legs.</div>
+        <div class="info warn"><b>Balance —</b> Left fingertips on a wall are fine for stability. Right arm stays relaxed at your side.</div>
+
+        <button class="complete-btn" data-complete="lunges">Mark Complete</button>
+      </div></div></div>
+    </div>
+
+    <!-- Dead Bugs -->
+    <div class="row" data-row="deadbugs">
+      <div class="row-header" data-toggle="deadbugs">
+        <div class="row-icon">🐛</div>
+        <div class="row-main">
+          <div class="row-name">Dead Bugs</div>
+          <div class="row-meta">3 sets × 10 per side</div>
+        </div>
+        <div class="row-check">✓</div>
+        <div class="chevron"></div>
+      </div>
+      <div class="content-wrap"><div class="content-inner"><div class="content-pad">
+
+        <div class="stage">
+          <!-- Side view, lying on back. Legs in tabletop, one arm up. Opposite arm + leg extend away, then return. -->
+          <svg viewBox="0 0 220 220">
+            <line class="floor" x1="20" y1="196" x2="200" y2="196"/>
+            <!-- head -->
+            <circle class="skull" cx="44" cy="178" r="12"/>
+            <!-- torso flat on floor -->
+            <line class="bone" x1="60" y1="184" x2="122" y2="184"/>
+            <!-- static tabletop leg (ghost = the one that stays) -->
+            <line class="bone-ghost" x1="122" y1="184" x2="122" y2="142"/>
+            <line class="bone-ghost" x1="122" y1="142" x2="150" y2="142"/>
+            <!-- static raised arm (ghost = the one that stays) -->
+            <line class="bone-ghost" x1="68" y1="184" x2="68" y2="134"/>
+
+            <!-- moving leg: thigh hip -> knee -->
+            <line class="bone" x1="116" y1="184" x2="116" y2="142">
+              <animate attributeName="x2" values="116;148;148;116" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y2" values="142;160;160;142" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+            </line>
+            <!-- moving leg: shin knee -> ankle (straightens toward floor) -->
+            <line class="bone" x1="116" y1="142" x2="144" y2="142">
+              <animate attributeName="x1" values="116;148;148;116" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y1" values="142;160;160;142" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="x2" values="144;186;186;144" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y2" values="142;176;176;142" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+            </line>
+            <!-- moving arm (LEFT arm): reaches overhead -->
+            <line class="bone" x1="76" y1="184" x2="76" y2="132">
+              <animate attributeName="x2" values="76;38;38;76" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+              <animate attributeName="y2" values="132;150;150;132" keyTimes="0;0.4;0.6;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines=".42 0 .58 1;0 0 1 1;.42 0 .58 1"/>
+            </line>
+            <!-- cues: opposite directions -->
+            <path class="cue-arrow" d="M 168 128 L 190 148"/>
+            <path class="cue-head" d="M 193 151 l -10 -2 l 6 -8 z"/>
+            <path class="cue-arrow" d="M 56 118 L 34 136"/>
+            <path class="cue-head" d="M 31 139 l 4 -9 l 7 7 z"/>
+          </svg>
+          <div class="stage-caption"><b>Opposite</b> arm + leg extend · lower back stays flat</div>
+        </div>
+
+        <div class="tracker">
+          <div class="set-dots" data-dots="deadbugs">
+            <div class="set-dot"></div><div class="set-dot"></div><div class="set-dot"></div>
+          </div>
+          <div class="rep-row">
+            <button class="step-btn" data-step="deadbugs" data-dir="-1">−</button>
+            <div class="rep-num"><span id="deadbugs-rep">0</span><span> / 20</span></div>
+            <button class="step-btn plus" data-step="deadbugs" data-dir="1">+</button>
+          </div>
+          <div class="set-label" id="deadbugs-label">Set 1 of 3 · 20 = 10/side</div>
+        </div>
+
+        <div class="info tip"><b>Form —</b> On your back, knees and hips at 90° (tabletop). Slowly extend one leg and the opposite arm until they hover above the floor, then return. Your lower back must stay pressed into the mattress the whole time.</div>
+        <div class="info warn"><b>Arm note —</b> Only the left arm extends. The right arm rests bent on your chest — the legs still alternate normally.</div>
+
+        <button class="complete-btn" data-complete="deadbugs">Mark Complete</button>
+      </div></div></div>
+    </div>
+
+    <!-- Pallof Holds -->
+    <div class="row" data-row="pallof">
+      <div class="row-header" data-toggle="pallof">
+        <div class="row-icon">🎗️</div>
+        <div class="row-main">
+          <div class="row-name">Pallof Holds</div>
+          <div class="row-meta">3 sets × 20–30 sec · optional</div>
+        </div>
+        <div class="row-check">✓</div>
+        <div class="chevron"></div>
+      </div>
+      <div class="content-wrap"><div class="content-inner"><div class="content-pad">
+
+        <div class="stage">
+          <!-- Front view. Band anchored to the side pulls sideways; the body stays perfectly still and resists. -->
+          <svg viewBox="0 0 220 220">
+            <line class="floor" x1="40" y1="203" x2="180" y2="203"/>
+            <!-- anchor point -->
+            <rect x="16" y="96" width="8" height="24" rx="2" fill="#5B6472"/>
+            <!-- band: anchor -> hands, tension pulse -->
+            <line class="band" x1="24" y1="108" x2="102" y2="108">
+              <animate attributeName="x2" values="102;106;102" keyTimes="0;0.5;1" dur="1.6s" repeatCount="indefinite"/>
+            </line>
+            <!-- figure, front view, static = the whole point -->
+            <circle class="skull" cx="112" cy="52" r="14"/>
+            <line class="bone" x1="112" y1="66" x2="112" y2="140"/>
+            <!-- legs -->
+            <line class="bone" x1="112" y1="140" x2="90" y2="182"/>
+            <line class="bone" x1="90" y1="182" x2="90" y2="200"/>
+            <line class="bone" x1="112" y1="140" x2="134" y2="182"/>
+            <line class="bone" x1="134" y1="182" x2="134" y2="200"/>
+            <!-- arms extended forward holding band at chest height -->
+            <line class="bone-thin" x1="112" y1="86" x2="104" y2="108"/>
+            <!-- hands -->
+            <circle class="accent" cx="103" cy="108" r="8">
+              <animate attributeName="cx" values="103;107;103" keyTimes="0;0.5;1" dur="1.6s" repeatCount="indefinite"/>
+            </circle>
+            <!-- cue: band pulls left, you resist -->
+            <path class="cue-arrow" d="M 74 132 L 50 132"/>
+            <path class="cue-head" d="M 46 132 l 9 -5 l 0 10 z"/>
+            <text x="130" y="126" fill="#30D158" font-size="12" font-weight="700" font-family="-apple-system, sans-serif" opacity="0.9">stay still</text>
+          </svg>
+          <div class="stage-caption">Band pulls sideways · you <b>don't move</b> · that's the exercise</div>
+        </div>
+
+        <div class="tracker">
+          <div class="set-dots" data-dots="pallof">
+            <div class="set-dot"></div><div class="set-dot"></div><div class="set-dot"></div>
+          </div>
+          <div style="text-align:center;">
+            <div class="timer-num"><span id="pallof-timer">0</span>s</div>
+          </div>
+          <div class="timer-btn-row">
+            <button class="pill-btn" data-timer-start="pallof">Start 25s</button>
+            <button class="pill-btn" data-timer-reset="pallof">Reset</button>
+          </div>
+          <div class="set-label" id="pallof-label" style="margin-top:12px;">Set 1 of 3</div>
+        </div>
+
+        <div class="info tip"><b>Form —</b> Anchor a band at chest height to your side. Hold it with both hands at your chest, arms out. The band tries to twist you toward the anchor — your job is to not let it. Face each side per set.</div>
+        <div class="info warn"><b>With a broken arm —</b> Only if completely pain-free in the right hand. No band, or any discomfort? Skip it — this one is optional right now.</div>
+
+        <button class="complete-btn" data-complete="pallof">Mark Complete</button>
+      </div></div></div>
+    </div>
+
+    <!-- Cool-down -->
+    <div class="row cool" data-row="cooldown">
+      <div class="row-header" data-toggle="cooldown">
+        <div class="row-icon">🧘</div>
+        <div class="row-main">
+          <div class="row-name">Cool-down Walk</div>
+          <div class="row-meta">5 min</div>
+        </div>
+        <div class="row-check">✓</div>
+        <div class="chevron"></div>
+      </div>
+      <div class="content-wrap"><div class="content-inner"><div class="content-pad">
+        <div class="info tip"><b>Do —</b> Walk slowly, breathe deeply. Gentle quad and hip stretches, 20–30 sec per side.</div>
+        <div class="info warn"><b>Avoid —</b> Don't stretch the right arm or hand aggressively. Light, pain-free range of motion only.</div>
+        <button class="complete-btn" data-complete="cooldown">Mark Complete</button>
+      </div></div></div>
+    </div>
+
+  </div>
+
+  <div class="footer-note">
+    Take 1–2 full rest days between sessions.<br>
+    Sharp pain or swelling? Stop, ice, and check with Dr. Granot before pushing further.
+  </div>
+
+<script>
+(function(){
+  const EXERCISES = {
+    warmup:   { kind:'simple' },
+    squats:   { kind:'reps', maxRep:15, maxSet:3 },
+    bridges:  { kind:'reps', maxRep:15, maxSet:3 },
+    lunges:   { kind:'reps', maxRep:20, maxSet:3 },
+    deadbugs: { kind:'reps', maxRep:20, maxSet:3 },
+    pallof:   { kind:'timer', duration:25, maxSet:3 },
+    cooldown: { kind:'simple' }
+  };
+  const TOTAL = Object.keys(EXERCISES).length;
+  const STORE_KEY = 'day1-workout-v3';
+
+  let state = {};
+  Object.keys(EXERCISES).forEach(id=>{
+    state[id] = { rep:0, set:1, done:false };
+  });
+
+  function load(){
+    try{
+      const raw = localStorage.getItem(STORE_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        Object.keys(EXERCISES).forEach(id=>{
+          if(parsed[id]) state[id] = Object.assign(state[id], parsed[id]);
+        });
+      }
+    }catch(e){}
+  }
+  function save(){
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+  }
+
+  function updateRing(){
+    const doneCount = Object.values(state).filter(s=>s.done).length;
+    const circumference = 175.9;
+    document.getElementById('ringFg').style.strokeDashoffset =
+      circumference - (doneCount/TOTAL)*circumference;
+    document.getElementById('ringLabel').textContent = doneCount + '/' + TOTAL;
+    const sub = document.getElementById('progressSub');
+    if(doneCount === 0) sub.textContent = "Tap an exercise to begin";
+    else if(doneCount === TOTAL) sub.textContent = "Workout complete — nice work 💪";
+    else sub.textContent = doneCount + " of " + TOTAL + " exercises done";
+  }
+
+  function renderDots(id){
+    const wrap = document.querySelector('[data-dots="'+id+'"]');
+    if(!wrap) return;
+    const dots = wrap.querySelectorAll('.set-dot');
+    const s = state[id];
+    dots.forEach((d, i)=>{
+      d.classList.remove('active','filled');
+      if(i < s.set - 1 || s.done) d.classList.add('filled');
+      else if(i === s.set - 1) d.classList.add('active');
+    });
+  }
+
+  function renderReps(id){
+    const cfg = EXERCISES[id];
+    const s = state[id];
+    const repEl = document.getElementById(id+'-rep');
+    if(repEl) repEl.textContent = s.rep;
+    const labelEl = document.getElementById(id+'-label');
+    if(labelEl){
+      const base = 'Set ' + s.set + ' of ' + cfg.maxSet;
+      if(id === 'lunges') labelEl.textContent = base + ' · 20 = 10/leg';
+      else if(id === 'deadbugs') labelEl.textContent = base + ' · 20 = 10/side';
+      else labelEl.textContent = base;
+    }
+    renderDots(id);
+  }
+
+  function renderRow(id){
+    const row = document.querySelector('.row[data-row="'+id+'"]');
+    if(row) row.classList.toggle('done', !!state[id].done);
+  }
+
+  function renderAll(){
+    Object.keys(EXERCISES).forEach(id=>{
+      if(EXERCISES[id].kind === 'reps') renderReps(id);
+      if(EXERCISES[id].kind === 'timer') renderDots(id);
+      renderRow(id);
+      const btn = document.querySelector('[data-complete="'+id+'"]');
+      if(btn) btn.textContent = state[id].done ? '✓ Completed' : 'Mark Complete';
+    });
+    updateRing();
+  }
+
+  /* Expand/collapse — bound ONLY to the header row */
+  document.querySelectorAll('[data-toggle]').forEach(header=>{
+    header.addEventListener('click', function(){
+      const id = header.getAttribute('data-toggle');
+      const row = document.querySelector('.row[data-row="'+id+'"]');
+      if(!row) return;
+      const isOpen = row.classList.contains('expanded');
+      document.querySelectorAll('.row.expanded').forEach(r=>{
+        if(r !== row) r.classList.remove('expanded');
+      });
+      row.classList.toggle('expanded', !isOpen);
+    });
+  });
+
+  /* Rep steppers */
+  document.querySelectorAll('[data-step]').forEach(btn=>{
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      const id = btn.getAttribute('data-step');
+      const dir = parseInt(btn.getAttribute('data-dir'), 10);
+      const cfg = EXERCISES[id];
+      const s = state[id];
+      let rep = s.rep + dir;
+      if(rep > cfg.maxRep){
+        if(s.set < cfg.maxSet){ s.set += 1; rep = 0; }
+        else rep = cfg.maxRep;
+      }
+      if(rep < 0){
+        if(s.set > 1){ s.set -= 1; rep = cfg.maxRep; }
+        else rep = 0;
+      }
+      s.rep = rep;
+      renderReps(id);
+      save();
+    });
+  });
+
+  /* Timer */
+  let timerHandle = null;
+  document.querySelectorAll('[data-timer-start]').forEach(btn=>{
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      const id = btn.getAttribute('data-timer-start');
+      const cfg = EXERCISES[id];
+      if(timerHandle) clearInterval(timerHandle);
+      let elapsed = 0;
+      const el = document.getElementById(id+'-timer');
+      el.textContent = '0';
+      timerHandle = setInterval(()=>{
+        elapsed++;
+        el.textContent = elapsed;
+        if(elapsed >= cfg.duration){
+          clearInterval(timerHandle);
+          const s = state[id];
+          if(s.set < cfg.maxSet) s.set += 1;
+          renderDots(id);
+          save();
+        }
+      }, 1000);
+    });
+  });
+  document.querySelectorAll('[data-timer-reset]').forEach(btn=>{
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      if(timerHandle) clearInterval(timerHandle);
+      document.getElementById(btn.getAttribute('data-timer-reset')+'-timer').textContent = '0';
+    });
+  });
+
+  /* Mark complete */
+  document.querySelectorAll('[data-complete]').forEach(btn=>{
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      const id = btn.getAttribute('data-complete');
+      state[id].done = !state[id].done;
+      btn.textContent = state[id].done ? '✓ Completed' : 'Mark Complete';
+      renderRow(id);
+      updateRing();
+      save();
+    });
+  });
+
+  load();
+  renderAll();
+})();
+</script>
+</body>
+</html>
