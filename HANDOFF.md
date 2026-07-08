@@ -5,6 +5,24 @@ should read this first, then CLAUDE.md, then docs/FD.md.
 
 ---
 
+## 2026-07-08 (latest) — Design prompts written
+
+- [docs/DESIGN_PROMPTS.md](docs/DESIGN_PROMPTS.md) now has **10 self-contained
+  Claude Design prompts** covering every v1 screen (onboarding S0–S5 as one
+  flow, then Today, Plan Builder, Session Editor, Workout Player, Exercise
+  Library, Stats, Badges, Profile & Settings, Social/Friends), each derived
+  directly from its FD.md section and repeating the STYLE.md tokens inline so
+  it can be pasted standalone into a fresh session.
+- Each prompt asks for a single self-contained HTML mockup (same
+  no-build technique as [index.html](index.html)) so outputs are directly
+  comparable and reviewable in a browser.
+- A **Design DNA compliance checklist** at the bottom of that file is the bar
+  for accepting/rejecting each generated screen — the workout player prompt
+  is explicitly framed as the quality floor for every other screen.
+- **Nothing has been run yet.** Next: fire the prompts one by one (owner's
+  call on order/pace), review each against the checklist, iterate. Once
+  screens are approved they become the reference for the real Next.js port.
+
 ## 2026-07-08 (later) — FD drafted end-to-end
 
 - [docs/FD.md](docs/FD.md) now covers **every v1 screen**: navigation model
