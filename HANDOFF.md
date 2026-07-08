@@ -19,8 +19,13 @@ should read this first, then CLAUDE.md, then docs/FD.md.
   (no sprite sheets needed for now).
 - Repo is public (owner tests the prototype live via GitHub Pages) — keep
   anything sensitive out of committed files; production deploys to Vercel.
-- **Next:** owner reviews FD (esp. Appendix A) → then generate Claude Design
-  prompts per screen, then TD.
+- Owner reviewed Appendix A: **all knobs confirmed**. Streak credit =
+  full completion; the editable session ("Remove from today" in the player)
+  is the escape valve, no partial credit.
+- Personal medical details scrubbed from the public prototype
+  ([index.html](index.html)) — warn blocks are now generic form/safety cues.
+- **FD is approved. Next:** generate Claude Design prompts per screen, then
+  write docs/TD.md.
 
 ## 2026-07-08 — Project bootstrap
 

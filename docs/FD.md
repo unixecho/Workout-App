@@ -267,6 +267,7 @@ section formalizes it. Full-screen takeover (tab bar hidden), exit via back.
 | Mark Complete | Toggles done; ring updates; **auto-writes a log entry** (exercise, sets/reps actually recorded, timestamp) |
 | Exercise icon long-press / ⓘ | Exercise Library detail sheet (form deep-dive) without leaving the player |
 | Close (✕) | Back to Today; in-progress state persists (local-first, synced) |
+| ⋯ on an exercise row (or swipe) | **Remove from today** — edits the exercise out of this session (confirm sheet; logged as removed). Completion requirement recalculates, so the session can still be finished honestly |
 | ⋯ overflow (header) | **End workout early** (logs partial session, confirm sheet) / Report a problem with an exercise |
 
 **Completion moment:** when the last non-optional exercise is marked done —
@@ -503,6 +504,10 @@ activity visibility. Leaderboards are v1.5 — not designed here.**
 - A **streak day** = a scheduled workout day whose session was fully
   completed (§6), **or** a scheduled rest day (rest never breaks a streak —
   the plan defines rhythm, not guilt).
+- **Full completion is required for streak credit** (owner decision,
+  2026-07-08). The escape valve is that the session is editable: a user who
+  can't do an exercise removes it from today (§6 "Remove from today") and
+  finishes the rest — no partial-credit rules needed.
 - Missing a scheduled workout day breaks the streak, **unless** a **streak
   freeze** auto-applies. Freezes: earn 1 per 7 consecutive completed
   sessions, bank max 2, auto-applied silently (user informed next open:
@@ -552,12 +557,12 @@ binding for every screen.
 
 ---
 
-## Appendix A — product knobs for owner review
-
-Decisions made to keep moving; each is one line to change:
+## Appendix A — product knobs (✅ all confirmed by owner, 2026-07-08)
 
 1. **Streak credit requires full completion** of non-optional exercises
-   ("End early" logs history but no streak). Alternative: credit at ≥60%.
+   ("End early" logs history but no streak). **Confirmed** — the session is
+   editable, so users edit an exercise out and finish rather than getting
+   partial credit (see §6 "Remove from today", §12.1).
 2. **Streak freezes**: earn 1 per 7 completed sessions, bank 2, auto-apply.
 3. **Privacy switch is not retroactive** (old feed items remain).
 4. **Fist-bump is the only reaction** in v1 (one type keeps the feed warm
