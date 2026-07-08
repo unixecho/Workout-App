@@ -5,6 +5,23 @@ should read this first, then CLAUDE.md, then docs/FD.md.
 
 ---
 
+## 2026-07-08 (later) — FD drafted end-to-end
+
+- [docs/FD.md](docs/FD.md) now covers **every v1 screen**: navigation model
+  (5-tab bar), Today/home, Plan Builder, Session Editor, Workout Player
+  (formalized from the prototype), Exercise Library, Stats, Badges screen,
+  Profile & Settings, Social/Friends, and badge/streak mechanics — each with
+  purpose, layout, every button + destination, states, and edge cases.
+- **Appendix A** in the FD lists the product knobs the assistant decided
+  autonomously (streak credit rule, freezes, privacy retroactivity, etc.) —
+  owner should skim and confirm/tune these.
+- Owner confirmed: animated **SVG** exercise demos are the v1 technique
+  (no sprite sheets needed for now).
+- Repo is public (owner tests the prototype live via GitHub Pages) — keep
+  anything sensitive out of committed files; production deploys to Vercel.
+- **Next:** owner reviews FD (esp. Appendix A) → then generate Claude Design
+  prompts per screen, then TD.
+
 ## 2026-07-08 — Project bootstrap
 
 Project bootstrapped at `C:\Users\Johnathan\Documents\GitHub\Workout-App`,

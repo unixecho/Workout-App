@@ -1,9 +1,9 @@
 # TODO
 
-- [ ] Finish docs/FD.md sections 3+ (screen-by-screen design: plan builder,
-      session editor, workout player, exercise library, stats, badges,
-      profile/settings, social/friends — each with purpose, layout, every
-      button and where it leads, states, edge cases)
+- [x] Finish docs/FD.md sections 3+ (screen-by-screen design: today/home,
+      plan builder, session editor, workout player, exercise library, stats,
+      badges, profile/settings, social/friends, badge/streak mechanics) —
+      **drafted 2026-07-08, awaiting owner review (see FD Appendix A knobs)**
 - [ ] Finalize data model (users, plans, sessions, exercises, logs, badges,
       friendships)
 - [ ] Write docs/TD.md once FD is signed off
