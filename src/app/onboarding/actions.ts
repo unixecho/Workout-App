@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { generateWeek, type Equipment, type Goal } from "@/lib/plan/generate";
+import { selectSessionExercises, type ExerciseRow } from "@/lib/plan/exercises";
 import { redirect } from "next/navigation";
 
 export interface CompleteOnboardingInput {
@@ -64,6 +65,13 @@ export async function completeOnboarding(input: CompleteOnboardingInput) {
   const week = generateWeek(input.goal, input.activeDays);
   const weekStart = startOfWeekMonday(new Date());
 
+  // Only one active plan per user — re-running onboarding replaces it.
+  await supabase
+    .from("plans")
+    .update({ status: "superseded" })
+    .eq("user_id", user.id)
+    .eq("status", "active");
+
   const { data: plan, error: planError } = await supabase
     .from("plans")
     .insert({
@@ -79,19 +87,46 @@ export async function completeOnboarding(input: CompleteOnboardingInput) {
     throw new Error(`Failed to create plan: ${planError?.message}`);
   }
 
-  const { error: daysError } = await supabase.from("plan_days").insert(
-    week.map((day) => ({
-      plan_id: plan.id,
-      day_of_week: day.dayOfWeek,
-      is_rest_day: day.isRestDay,
-      session_title: day.sessionTitle,
-      focus_muscles: day.focusMuscles,
-      est_duration_min: day.estDurationMin,
-    })),
-  );
+  const { data: days, error: daysError } = await supabase
+    .from("plan_days")
+    .insert(
+      week.map((day) => ({
+        plan_id: plan.id,
+        day_of_week: day.dayOfWeek,
+        is_rest_day: day.isRestDay,
+        session_title: day.sessionTitle,
+        focus_muscles: day.focusMuscles,
+        est_duration_min: day.estDurationMin,
+      })),
+    )
+    .select("id, day_of_week, is_rest_day, focus_muscles");
 
-  if (daysError) {
-    throw new Error(`Failed to create plan days: ${daysError.message}`);
+  if (daysError || !days) {
+    throw new Error(`Failed to create plan days: ${daysError?.message}`);
+  }
+
+  const { data: library } = await supabase
+    .from("exercises")
+    .select("id, slug, name, muscle_groups, equipment, difficulty, adaptations");
+
+  if (library?.length) {
+    const rows = days
+      .filter((d) => !d.is_rest_day)
+      .flatMap((d) =>
+        selectSessionExercises(
+          d.focus_muscles ?? [],
+          input.goal,
+          input.equipment,
+          input.limitations,
+          library as ExerciseRow[],
+        ).map((se) => ({ ...se, plan_day_id: d.id })),
+      );
+    if (rows.length) {
+      const { error: seError } = await supabase.from("session_exercises").insert(rows);
+      if (seError) {
+        throw new Error(`Failed to fill sessions: ${seError.message}`);
+      }
+    }
   }
 
   redirect("/today");

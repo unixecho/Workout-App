@@ -1,13 +1,101 @@
-/**
- * Placeholder. Port from `claude design/stats&progress/Stats.dc.html` (FD.md §8).
- */
-export default function StatsPage() {
+import { getActivePlan, mondayIndex, requireProfile } from "@/lib/data";
+import { StatsScreen } from "@/components/stats/StatsScreen";
+
+export default async function StatsPage() {
+  const { supabase, user, profile } = await requireProfile();
+
+  const { data: streak } = await supabase
+    .from("streaks")
+    .select("current_streak, longest_streak, freeze_count")
+    .eq("user_id", user.id)
+    .single();
+
+  const { data: logs } = await supabase
+    .from("workout_logs")
+    .select("id, plan_day_id, started_at, duration_seconds, total_reps, status")
+    .eq("user_id", user.id)
+    .eq("status", "complete")
+    .order("started_at", { ascending: false });
+  const completed = logs ?? [];
+
+  // This week
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - mondayIndex(now));
+  weekStart.setHours(0, 0, 0, 0);
+  const thisWeekDone = completed.filter((l) => new Date(l.started_at) >= weekStart).length;
+  const plan = await getActivePlan(supabase, user.id);
+  const thisWeekPlanned = plan?.days.filter((d) => !d.is_rest_day).length ?? 0;
+
+  // 8-week consistency: bucket 7 = current week, bucket 0 = 7 weeks back
+  const weeks: number[] = Array.from({ length: 8 }, () => 0);
+  const earliest = weekStart.getTime() - 7 * 7 * 86400000;
+  for (const l of completed) {
+    const w = Math.floor((new Date(l.started_at).getTime() - earliest) / (7 * 86400000));
+    if (w >= 0 && w < 8) weeks[w] += 1;
+  }
+
+  // Weigh-ins
+  const { data: weighIns } = await supabase
+    .from("weigh_ins")
+    .select("weight_kg, logged_at")
+    .eq("user_id", user.id)
+    .order("logged_at");
+
+  // Muscle balance from exercise_logs joined via exercises
+  const { data: exLogs } = await supabase
+    .from("exercise_logs")
+    .select("sets_completed, exercises(muscle_groups), workout_logs!inner(user_id, status)")
+    .eq("workout_logs.user_id", user.id)
+    .eq("workout_logs.status", "complete")
+    .eq("removed", false);
+  const balance: Record<string, number> = {};
+  for (const l of exLogs ?? []) {
+    const muscles = (l.exercises as unknown as { muscle_groups: string[] })?.muscle_groups ?? [];
+    const sets = Array.isArray(l.sets_completed) ? l.sets_completed.length : 1;
+    for (const m of muscles) {
+      if (m === "Mobility") continue;
+      balance[m] = (balance[m] ?? 0) + sets;
+    }
+  }
+
+  const { count: badgesEarned } = await supabase
+    .from("user_badges")
+    .select("badge_id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .not("earned_at", "is", null);
+  const { count: badgesTotal } = await supabase
+    .from("badges")
+    .select("id", { count: "exact", head: true });
+
+  // History with day titles
+  const dayTitles = new Map((plan?.days ?? []).map((d) => [d.id, d.session_title ?? "Workout"]));
+
   return (
-    <main style={{ padding: "calc(var(--safe-top) + 20px) 20px 40px" }}>
-      <h1 style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.02em" }}>Stats</h1>
-      <p style={{ color: "var(--ink-dim)" }}>
-        Placeholder — port from the approved mockup next.
-      </p>
-    </main>
+    <StatsScreen
+      streak={streak?.current_streak ?? 0}
+      longest={streak?.longest_streak ?? 0}
+      freezes={streak?.freeze_count ?? 0}
+      weekDone={thisWeekDone}
+      weekPlanned={thisWeekPlanned}
+      consistency={weeks}
+      weighIns={(weighIns ?? []).map((w) => ({ kg: Number(w.weight_kg), at: w.logged_at }))}
+      currentWeightKg={profile.weight_kg ? Number(profile.weight_kg) : null}
+      targetWeightKg={profile.target_weight_kg ? Number(profile.target_weight_kg) : null}
+      totals={{
+        workouts: completed.length,
+        minutes: Math.round(completed.reduce((a, l) => a + (l.duration_seconds ?? 0), 0) / 60),
+        reps: completed.reduce((a, l) => a + (l.total_reps ?? 0), 0),
+      }}
+      balance={Object.entries(balance)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)}
+      badges={{ earned: badgesEarned ?? 0, total: badgesTotal ?? 0 }}
+      history={completed.slice(0, 8).map((l) => ({
+        title: dayTitles.get(l.plan_day_id) ?? "Workout",
+        date: new Date(l.started_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+        minutes: Math.round((l.duration_seconds ?? 0) / 60),
+      }))}
+    />
   );
 }

@@ -1,13 +1,23 @@
-/**
- * Placeholder. Port from `claude design/plan builder/Plan.dc.html` (FD.md §4).
- */
-export default function PlanPage() {
+import { getActivePlan, mondayIndex, requireProfile } from "@/lib/data";
+import { PlanScreen } from "@/components/plan/PlanScreen";
+
+export default async function PlanPage() {
+  const { supabase, user } = await requireProfile();
+  const plan = await getActivePlan(supabase, user.id);
+
+  const { data: doneLogs } = await supabase
+    .from("workout_logs")
+    .select("plan_day_id")
+    .eq("user_id", user.id)
+    .eq("status", "complete");
+  const completedDayIds = (doneLogs ?? []).map((l) => l.plan_day_id as string);
+
   return (
-    <main style={{ padding: "calc(var(--safe-top) + 20px) 20px 40px" }}>
-      <h1 style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.02em" }}>Plan</h1>
-      <p style={{ color: "var(--ink-dim)" }}>
-        Placeholder — port from the approved mockup next.
-      </p>
-    </main>
+    <PlanScreen
+      planName={plan?.name ?? "My Plan"}
+      days={plan?.days ?? []}
+      todayIdx={mondayIndex(new Date())}
+      completedDayIds={completedDayIds}
+    />
   );
 }
