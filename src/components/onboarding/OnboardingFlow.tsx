@@ -5,6 +5,12 @@ import { createClient } from "@/lib/supabase/client";
 import { completeOnboarding } from "@/app/onboarding/actions";
 import { generateWeek, type Equipment, type Goal } from "@/lib/plan/generate";
 
+// Hardcoded production origin for auth redirects — falls back to the
+// current origin so localhost still works without setting this locally.
+// Avoids depending on window.location.origin in production, which is what
+// sent test magic links to localhost during development.
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;
+
 const EASE = "cubic-bezier(.4,0,.2,1)";
 const TRANSITION_MS = 350;
 const BUILDING_MS = 600;
@@ -234,7 +240,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
     setAuthBusy(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: `${SITE_URL ?? window.location.origin}/auth/callback` },
     });
     if (error) {
       setAuthError(error.message);
@@ -252,7 +258,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
     setAuthBusy(true);
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: `${SITE_URL ?? window.location.origin}/auth/callback` },
     });
     setAuthBusy(false);
     if (error) {
