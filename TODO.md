@@ -1,50 +1,39 @@
 # TODO
 
-- [x] Finish docs/FD.md sections 3+ (screen-by-screen design: today/home,
-      plan builder, session editor, workout player, exercise library, stats,
-      badges, profile/settings, social/friends, badge/streak mechanics) —
-      **drafted 2026-07-08, awaiting owner review (see FD Appendix A knobs)**
-- [ ] Finalize data model (users, plans, sessions, exercises, logs, badges,
-      friendships)
-- [x] Write docs/TD.md once FD is signed off — **drafted 2026-07-09**: data
-      model, RLS policies, auth flow, API/route structure, realtime usage,
-      badge/streak logic, animation architecture, deployment envs
-- [x] Generate Claude Design prompts per screen — see
-      [docs/DESIGN_PROMPTS.md](docs/DESIGN_PROMPTS.md) (10 prompts: onboarding,
-      today, plan builder, session editor, workout player, exercise library,
-      stats, badges, profile/settings, social) — **ready to fire, none run yet**
-- [x] Run each Claude Design prompt, review output against the DNA compliance
-      checklist — **done 2026-07-09**, all 10 screens extracted to
-      `claude design/`. Workout Player/Badges/Session Editor/Plan/Friends
-      clean; Today.dc.html was rewritten (had a fake iPhone bezel + hand-drawn
-      status bar instead of real safe-area insets); Exercise
-      Library/Onboarding/Stats/Profile have minor cosmetic token drift
-      (deferred to the port step, not blocking)
-- [ ] Set up Supabase project (⚠️ region choice is permanent — decide
-      deliberately before creating)
-- [ ] Set up Vercel project + connect to
-      https://github.com/unixecho/Workout-App
-- [x] Scaffold Next.js app structure — **done 2026-07-09**: Next.js 16 (App
-      Router, TypeScript, src dir, no Tailwind), STYLE.md tokens in
-      globals.css, all 5 tab routes + onboarding (S0-S5) + Session Editor +
-      Workout Player + Exercise Library + Badges as placeholder pages,
-      Supabase client/server/middleware helpers wired per docs/TD.md (auth
-      gating no-ops until the Supabase project exists), dev server verified
-      booting clean. Not committed yet.
-- [ ] Port the reference prototype (index.html, originally
-      C:\Users\Johnathan\Downloads\day1_workout_1.html) into a production
-      React component, preserving its exact visual and motion quality
-- [ ] Port the other 8 approved mockups (`claude design/*.dc.html`) into
-      their real route files (all currently placeholders — see TD.md route
-      list). Onboarding done — see below.
-- [x] Port onboarding (S0-S5) to a real, working flow — **done 2026-07-09**.
-      Real Supabase auth (Google OAuth + magic link), real handle-uniqueness
-      check, v1 rule-based plan generator, real profile/plan writes.
-      Verified end-to-end in-browser.
-- [ ] ⚠️ Configure the Google OAuth provider in Supabase (Auth → Providers →
-      Google, needs a Google Cloud OAuth client ID/secret) — the "Continue
-      with Google" button is wired in code but will error until this is set
-      up. Magic link works today with no extra setup.
-- [ ] Seed the exercise library (`exercises` table is empty) — until then,
-      generated plans have real day/session shape but no exercises inside
-      each session (`session_exercises` stays empty)
+## Done (v1 build-out)
+
+- [x] docs/FD.md — all screens drafted + approved (2026-07-08)
+- [x] docs/TD.md — full technical design (2026-07-09)
+- [x] Claude Design prompts + all 10 mockups generated, DNA-checked (2026-07-09)
+- [x] Supabase project live (ap-southeast-2) + schema/RLS/triggers applied
+- [x] Vercel project live (workout-app-jade-theta.vercel.app), auto-deploys main
+- [x] Next.js app scaffolded (Next 16, App Router, STYLE.md tokens)
+- [x] Onboarding ported — real auth (magic link + Google), handle check,
+      rule-based plan generation (2026-07-09)
+- [x] Google OAuth provider configured and verified working
+- [x] Exercise library seeded (29 exercises, adaptations keyed to the 8
+      limitation tags); plan generation fills session_exercises
+- [x] **All screens ported to real features** (2026-07-09): Today, Plan,
+      Session Editor, Workout Player (logging/streaks/badges/celebration),
+      Exercise Library, Stats, Badges, Profile, Friends
+
+## Next
+
+- [ ] Set `NEXT_PUBLIC_SITE_URL=https://workout-app-jade-theta.vercel.app`
+      in Vercel env vars (owner) — keeps auth redirects off localhost
+- [ ] Polish pass against the mockups: motion/:active states everywhere,
+      per-exercise demo keyframes (only 9 generic patterns exist), richer
+      week-strip/hero states
+- [ ] Badge engine: implement remaining rule types (full_week, comeback,
+      goal_reached, perfect_form, friend/social) + streak freeze auto-apply
+      (earn 1 per 7 sessions, bank 2)
+- [ ] Realtime subscriptions (feed inserts, fist-bump counts, incoming
+      requests) per docs/TD.md — currently request/response only
+- [ ] Session Editor drag-to-reorder; "Move to…" / "Duplicate" day actions
+- [ ] Workout Player: "Remove from today" + "End workout early" flows
+- [ ] Notifications (workout reminder, streak-at-risk, social batch) — needs
+      push infrastructure decision
+- [ ] PWA manifest + app icons (add-to-home-screen)
+- [ ] Google OAuth consent screen verification before public launch (owner)
+- [ ] Decide preview-vs-prod Supabase environment strategy before the next
+      schema change ships (docs/TD.md § Deployment)

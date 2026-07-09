@@ -5,7 +5,34 @@ should read this first, then CLAUDE.md, then docs/FD.md.
 
 ---
 
-## 2026-07-09 (latest) — Next.js app scaffolded
+## 2026-07-09 (latest) — Every v1 screen ported and live
+
+- **All 9 remaining screens ported to real, working features** against live
+  Supabase data (commit 69fba9e): Today, Plan, Session Editor, Workout
+  Player (with logging, streaks, badge engine, celebration overlay),
+  Exercise Library (browse/detail/picker), Stats, Badges, Profile
+  (toggles/sign-out/delete), Friends (feed/requests/search/fist-bumps).
+- **Exercise library seeded** (29 exercises, migration 0004) with form cues,
+  common mistakes, and adaptations keyed to the 8 limitation tags. Plan
+  generation now fills `session_exercises` via the rule-based selector in
+  [src/lib/plan/exercises.ts](src/lib/plan/exercises.ts). Demos are
+  pattern-driven animated SVG stick figures (SMIL, pause-at-extremes) in
+  the single shared [ExerciseDemo](src/components/ExerciseDemo.tsx).
+- New RPCs: `search_profiles` (0005) and `friend_cards` (0006) — narrow
+  security-definer functions because profiles RLS is owner-only.
+- **Discovered two real auth users exist** (owner's accounts: `john` via
+  email, `codra` via Google — Supabase did NOT link them). Briefly
+  mis-diagnosed their two plans as duplicates and superseded john's; fixed.
+  Multi-account is worth watching in future debugging.
+- Verified in-browser with an authenticated session: real plan/day data,
+  personalized adaptation notes (wrist → push-up note), friend search
+  finds real accounts, badges/stats aggregate correctly.
+- Known gaps: full_week/comeback/goal/perfect-form/social badge rules not
+  yet evaluated (engine handles the other 6 types); streak freezes not
+  auto-applied; no realtime subscriptions yet; drag-reorder in Session
+  Editor deferred; no push notifications.
+
+## 2026-07-09 (earlier) — Next.js app scaffolded
 
 - Scaffolded the real Next.js app in this repo (Next 16, App Router,
   TypeScript, `src/` dir, no Tailwind — plain CSS with STYLE.md's tokens as
