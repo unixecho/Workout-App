@@ -1,0 +1,118 @@
+/* RepUp design tokens — see STYLE.md. This file is the single source of
+   truth for every CSS custom property used across the app; do not redefine
+   these locally in a component. */
+
+:root {
+  /* Surfaces */
+  --bg: #0a0d12;
+  --bg-elev: #12161d;
+  --card: #171c24;
+  --card-border: rgba(255, 255, 255, 0.06);
+  --hairline: rgba(255, 255, 255, 0.08);
+
+  /* Text tiers */
+  --ink: #f2f4f7;
+  --ink-dim: #9aa3af;
+  --ink-faint: #5b6472;
+
+  /* Accents */
+  --blue: #3d8bfd;
+  --green: #30d158;
+  --amber: #ff9f0a;
+  --red: #ff453a;
+
+  /* Info-block pastel text (paired with 10% alpha accent background) */
+  --blue-pastel: #cfe3ff;
+  --amber-pastel: #ffe3b8;
+
+  /* Neutral interactive fills */
+  --fill-resting: rgba(255, 255, 255, 0.06);
+  --fill-pressed: rgba(255, 255, 255, 0.16);
+
+  /* Radii scale — nothing outside this set (STYLE.md §3) */
+  --radius-card: 16px;
+  --radius-panel: 14px;
+  --radius-block: 12px;
+  --radius-chip: 10px;
+  --radius-pill: 999px;
+
+  /* Safe-area passthrough */
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+
+  /* Motion */
+  --ease-structural: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-state: ease;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  overscroll-behavior-y: none;
+}
+
+body {
+  color: var(--ink);
+  font-family:
+    -apple-system,
+    "SF Pro Text",
+    "SF Pro Display",
+    system-ui,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+  background:
+    radial-gradient(
+      ellipse 80% 40% at 85% -5%,
+      rgba(61, 139, 253, 0.13),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 70% 35% at 10% 108%,
+      rgba(48, 209, 88, 0.08),
+      transparent 60%
+    ),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+a {
+  color: var(--blue);
+  text-decoration: none;
+}
+a:hover {
+  color: #5aa0ff;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

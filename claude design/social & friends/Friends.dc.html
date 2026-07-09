@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #05070A;
+    font-family: -apple-system, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display: flex; justify-content: center; align-items: flex-start;
+    min-height: 100vh;
+  }
+  a { color: #3D8BFD; text-decoration: none; }
+  a:hover { color: #6AA9FF; }
+  .scrl::-webkit-scrollbar { width: 0; height: 0; }
+  input { font-family: inherit; }
+  @keyframes bumpPulse {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.45) rotate(-12deg); }
+    100% { transform: scale(1) rotate(0); }
+  }
+  @keyframes ringPop {
+    0% { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</helmet>
+
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; background: #0A0D12; color: #F2F4F7; letter-spacing: 0; box-shadow: 0 40px 120px rgba(0,0,0,0.6);">
+
+  <!-- ambient glow -->
+  <div style="position: absolute; inset: 0; pointer-events: none; z-index: 0; background: radial-gradient(ellipse 80% 40% at 85% -5%, rgba(61,139,253,0.13), transparent 60%), radial-gradient(ellipse 70% 35% at 10% 108%, rgba(48,209,88,0.08), transparent 60%), #0A0D12;"></div>
+
+  <!-- dev toggle -->
+  <button onClick="{{ toggleEmpty }}" style="position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; border: 1px dashed rgba(255,255,255,0.2); background: rgba(10,13,18,0.7); backdrop-filter: blur(8px); color: #9AA3AF; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; cursor: pointer;">{{ devLabel }}</button>
+
+  <!-- scroll area -->
+  <div class="scrl" style="position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; z-index: 1; overscroll-behavior-y: none; -webkit-overflow-scrolling: touch;">
+
+    <!-- sticky header -->
+    <div style="position: sticky; top: 0; z-index: 30; padding: 46px 20px 12px; background: linear-gradient(to bottom, rgba(10,13,18,0.96) 62%, rgba(10,13,18,0.55) 88%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);">
+      <div style="display: flex; align-items: flex-end; justify-content: space-between;">
+        <div>
+          <div style="font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; color: #3D8BFD;">Your crew</div>
+          <div style="font-size: 34px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; margin-top: 2px;">Friends</div>
+        </div>
+        <button onClick="{{ openSheet }}" aria-label="Add friend" style="width: 38px; height: 38px; flex: none; border-radius: 999px; border: 1px solid rgba(61,139,253,0.35); background: rgba(61,139,253,0.16); color: #3D8BFD; font-size: 24px; font-weight: 400; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform .12s ease, background .12s ease;" style-active="background: rgba(61,139,253,0.3); transform: scale(0.92);">＋</button>
+      </div>
+
+      <!-- segmented control -->
+      <sc-if value="{{ showSeg }}" hint-placeholder-val="{{ true }}">
+      <div style="position: relative; display: flex; margin-top: 16px; padding: 3px; border-radius: 999px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.06);">
+        <div style="position: absolute; top: 3px; left: 3px; width: calc(50% - 3px); height: calc(100% - 6px); border-radius: 999px; background: rgba(255,255,255,0.1); box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: transform .3s cubic-bezier(.4,0,.2,1); transform: {{ segShift }};"></div>
+        <button onClick="{{ selActivity }}" style="position: relative; flex: 1; padding: 9px 0; border: 0; background: none; font-size: 14px; font-weight: 700; cursor: pointer; letter-spacing: -0.01em; transition: color .2s ease; color: {{ actColor }};">Activity</button>
+        <button onClick="{{ selFriends }}" style="position: relative; flex: 1; padding: 9px 0; border: 0; background: none; font-size: 14px; font-weight: 700; cursor: pointer; letter-spacing: -0.01em; transition: color .2s ease; color: {{ frdColor }};">Friends</button>
+      </div>
+      </sc-if>
+    </div>
+
+    <!-- CONTENT -->
+    <div style="padding: 4px 16px 108px;">
+
+      <!-- EMPTY STATE -->
+      <sc-if value="{{ showEmpty }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; align-items: center; text-align: center; padding: 88px 20px 0;">
+        <div style="width: 84px; height: 84px; border-radius: 999px; background: rgba(61,139,253,0.14); border: 1px solid rgba(61,139,253,0.25); display: flex; align-items: center; justify-content: center; animation: ringPop .4s cubic-bezier(.4,0,.2,1);">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8.5" r="3.4" fill="#3D8BFD"/><path d="M3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" fill="#3D8BFD"/><circle cx="17" cy="7.5" r="2.6" fill="#3D8BFD" opacity="0.55"/><path d="M15.5 13.6c2.8.2 5 2.2 5 5.4" stroke="#3D8BFD" stroke-width="1.8" stroke-linecap="round" opacity="0.55"/></svg>
+        </div>
+        <div style="font-size: 21px; font-weight: 800; letter-spacing: -0.02em; margin-top: 22px; max-width: 240px;">Training is better with backup</div>
+        <div style="font-size: 15px; font-weight: 500; color: #9AA3AF; margin-top: 8px; line-height: 1.5; max-width: 260px;">Add friends to trade fist bumps, cheer streaks, and stay accountable.</div>
+        <button onClick="{{ openSheet }}" style="width: 100%; max-width: 280px; margin-top: 28px; padding: 15px; border-radius: 12px; border: 0; background: #3D8BFD; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform .12s ease, filter .12s ease;" style-active="transform: scale(0.98); filter: brightness(1.1);">Add friend</button>
+        <button onClick="{{ shareLink }}" style="width: 100%; max-width: 280px; margin-top: 10px; padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.06); color: #F2F4F7; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform .12s ease, background .12s ease;" style-active="transform: scale(0.98); background: rgba(255,255,255,0.12);">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F2F4F7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          Share invite link
+        </button>
+      </div>
+      </sc-if>
+
+      <!-- ACTIVITY FEED -->
+      <sc-if value="{{ showActivity }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 8px;">
+        <sc-for list="{{ feed }}" as="ev" hint-placeholder-count="4">
+          <div style="{{ ev.cardStyle }}">
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+              <div style="{{ ev.avStyle }}">{{ ev.initials }}</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;">
+                  <div style="font-size: 14px; line-height: 1.45; color: #C6CDD8;"><span style="font-weight: 700; color: #F2F4F7;">{{ ev.name }}</span> {{ ev.event }}</div>
+                  <span style="flex: none; font-size: 12.5px; font-weight: 500; color: #5B6472; padding-top: 1px;">{{ ev.ts }}</span>
+                </div>
+                <div style="display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; padding: 4px 10px; border-radius: 999px; background: {{ ev.ctxBg }};">
+                  <span style="font-size: 13px;">{{ ev.ctxIcon }}</span>
+                  <span style="font-size: 12.5px; font-weight: 600; color: {{ ev.ctxFg }};">{{ ev.ctxText }}</span>
+                </div>
+                <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                  <button onClick="{{ ev.onBump }}" style="display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px 7px 11px; border-radius: 999px; border: 1px solid {{ ev.bumpBorder }}; background: {{ ev.bumpBg }}; cursor: pointer; transition: transform .12s ease, background .15s ease; -webkit-user-select: none; user-select: none;" style-active="transform: scale(0.94);">
+                    <span style="font-size: 15px; display: inline-block; transform-origin: 60% 80%; animation: {{ ev.pulseAnim }};">👊</span>
+                    <span style="font-size: 13px; font-weight: 700; color: {{ ev.bumpFg }}; font-variant-numeric: tabular-nums; min-width: 8px; text-align: center;">{{ ev.bumps }}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      </sc-if>
+
+      <!-- FRIENDS SEGMENT -->
+      <sc-if value="{{ showFriends }}" hint-placeholder-val="{{ false }}">
+      <div style="padding-top: 8px;">
+
+        <!-- Requests -->
+        <sc-if value="{{ hasRequests }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-bottom: 22px;">
+          <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #9AA3AF; padding: 0 4px 8px;">Requests</div>
+          <sc-for list="{{ requests }}" as="rq" hint-placeholder-count="1">
+            <div style="background: #171C24; border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 14px 16px;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="{{ rq.avStyle }}">{{ rq.initials }}</div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 16px; font-weight: 600; letter-spacing: -0.01em;">{{ rq.name }}</div>
+                  <div style="font-size: 12.5px; font-weight: 500; color: #9AA3AF; margin-top: 2px;">{{ rq.mutual }}</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 10px; margin-top: 14px;">
+                <button onClick="{{ rq.onAccept }}" style="flex: 1; padding: 10px; border-radius: 999px; border: 0; background: rgba(61,139,253,0.18); color: #3D8BFD; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform .12s ease, background .12s ease;" style-active="transform: scale(0.96); background: rgba(61,139,253,0.3);">Accept</button>
+                <button onClick="{{ rq.onDecline }}" style="flex: 1; padding: 10px; border-radius: 999px; border: 0; background: rgba(255,255,255,0.06); color: #C6CDD8; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform .12s ease, background .12s ease;" style-active="transform: scale(0.96); background: rgba(255,255,255,0.16);">Decline</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <!-- Friends list -->
+        <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px 8px;">
+          <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #9AA3AF;">Friends</div>
+          <div style="font-size: 12.5px; font-weight: 600; color: #5B6472;">{{ friendCount }}</div>
+        </div>
+        <div style="background: #171C24; border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; overflow: hidden;">
+          <sc-for list="{{ friends }}" as="fr" hint-placeholder-count="5">
+            <div style="{{ fr.rowStyle }}" style-active="background: rgba(255,255,255,0.04);">
+              <div style="{{ fr.avStyle }}">{{ fr.initials }}</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 16px; font-weight: 600; letter-spacing: -0.01em;">{{ fr.name }}</div>
+                <div style="font-size: 12.5px; font-weight: 500; color: #9AA3AF; margin-top: 2px;">{{ fr.meta }}</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; background: rgba(255,159,10,0.13);">
+                <span style="font-size: 14px;">🔥</span>
+                <span style="font-size: 14px; font-weight: 700; color: #FF9F0A; font-variant-numeric: tabular-nums;">{{ fr.streak }}</span>
+              </div>
+              <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style="margin-left: 2px;"><path d="M1 1l6 6-6 6" stroke="#5B6472" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+    </div>
+  </div>
+
+  <!-- bottom tab bar -->
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 40; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); background: linear-gradient(to top, rgba(10,13,18,0.98) 60%, rgba(10,13,18,0.6)); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-top: 1px solid rgba(255,255,255,0.06); display: flex;">
+    <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="5">
+      <button style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0 4px; border: 0; background: none; cursor: pointer; transition: transform .1s ease;" style-active="transform: scale(0.9);">
+        <div style="color: {{ tb.color }};" innerHTML="{{ tb.icon }}"></div>
+        <span style="font-size: 10px; font-weight: 600; letter-spacing: 0.01em; color: {{ tb.color }};">{{ tb.label }}</span>
+      </button>
+    </sc-for>
+  </div>
+
+  <!-- ADD FRIEND SHEET -->
+  <div onClick="{{ closeSheet }}" style="position: absolute; inset: 0; z-index: 50; background: rgba(0,0,0,0.55); transition: opacity .3s ease; opacity: {{ sheetOpacity }}; pointer-events: {{ sheetPointer }};"></div>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 51; background: #12161D; border-top-left-radius: 22px; border-top-right-radius: 22px; border-top: 1px solid rgba(255,255,255,0.08); padding: 10px 20px calc(24px + env(safe-area-inset-bottom)); transition: transform .35s cubic-bezier(.4,0,.2,1); transform: {{ sheetShift }}; box-shadow: 0 -20px 60px rgba(0,0,0,0.5);">
+    <div style="width: 38px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.18); margin: 0 auto 16px;"></div>
+    <div style="font-size: 20px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 14px;">Add friend</div>
+
+    <div style="display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); margin-bottom: 14px;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5B6472" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      <input value="{{ query }}" onInput="{{ onQuery }}" placeholder="Search by name or username" style="flex: 1; border: 0; background: none; outline: none; color: #F2F4F7; font-size: 15px; font-weight: 500;"/>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <sc-for list="{{ results }}" as="rs" hint-placeholder-count="3">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 10px 4px;">
+          <div style="{{ rs.avStyle }}">{{ rs.initials }}</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 15.5px; font-weight: 600; letter-spacing: -0.01em;">{{ rs.name }}</div>
+            <div style="font-size: 12.5px; font-weight: 500; color: #9AA3AF; margin-top: 1px;">{{ rs.handle }}</div>
+          </div>
+          <button onClick="{{ rs.onAdd }}" style="{{ rs.btnStyle }}" style-active="transform: scale(0.94);">{{ rs.btnLabel }}</button>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px; margin: 16px 0;">
+      <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.08);"></div>
+      <span style="font-size: 12.5px; font-weight: 600; color: #5B6472;">or</span>
+      <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.08);"></div>
+    </div>
+
+    <button onClick="{{ shareLink }}" style="width: 100%; padding: 15px; border-radius: 12px; border: 1px solid rgba(61,139,253,0.35); background: rgba(61,139,253,0.16); color: #3D8BFD; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform .12s ease, background .12s ease;" style-active="transform: scale(0.98); background: rgba(61,139,253,0.28);">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3D8BFD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+      Share invite link
+    </button>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 390, &quot;height&quot;: 844}}">
+class Component extends DCLogic {
+  state = {
+    seg: 'activity',
+    empty: false,
+    sheetOpen: false,
+    query: '',
+    feed: [
+      { id:'f1', name:'Maya Chen', initials:'MC', av:0, event:'completed Push Day', badge:false, ctxIcon:'🔥', ctxText:'12 day streak', ts:'8m', bumps:3, bumped:false, pulse:false },
+      { id:'f2', name:'Jordan Reyes', initials:'JR', av:1, event:'earned a badge', badge:true, ctxIcon:'🏅', ctxText:'10 Workouts club', ts:'24m', bumps:7, bumped:false, pulse:false },
+      { id:'f3', name:'Devin Park', initials:'DP', av:2, event:'completed Leg Day', badge:false, ctxIcon:'🔥', ctxText:'5 day streak', ts:'1h', bumps:1, bumped:false, pulse:false },
+      { id:'f4', name:'Sofia Martinez', initials:'SM', av:0, event:'hit a new PR', badge:false, ctxIcon:'💪', ctxText:'Deadlift · 185 lb', ts:'3h', bumps:5, bumped:false, pulse:false },
+      { id:'f5', name:'Alex Kim', initials:'AK', av:1, event:'completed Full Body', badge:false, ctxIcon:'🔥', ctxText:'21 day streak', ts:'5h', bumps:12, bumped:false, pulse:false },
+    ],
+    requests: [
+      { id:'r1', name:'Chris Nguyen', initials:'CN', av:2, mutual:'2 mutual friends · from Contacts' },
+    ],
+    friends: [
+      { id:'fr1', name:'Alex Kim', initials:'AK', av:1, streak:21, meta:'Trained today · Full Body' },
+      { id:'fr2', name:'Maya Chen', initials:'MC', av:0, streak:12, meta:'Trained today · Push Day' },
+      { id:'fr3', name:'Sofia Martinez', initials:'SM', av:0, streak:8, meta:'Active 3h ago' },
+      { id:'fr4', name:'Devin Park', initials:'DP', av:2, streak:5, meta:'Active 1h ago' },
+      { id:'fr5', name:'Jordan Reyes', initials:'JR', av:1, streak:3, meta:'Active 24m ago' },
+    ],
+    results: [
+      { id:'s1', name:'Priya Patel', initials:'PP', av:0, handle:'@priyalifts', added:false },
+      { id:'s2', name:'Marcus Lee', initials:'ML', av:1, handle:'@marcus.pr', added:false },
+      { id:'s3', name:'Emma Wilson', initials:'EW', av:2, handle:'@emmaw', added:false },
+    ],
+  };
+
+  avPalette = [
+    { bg:'linear-gradient(135deg, rgba(61,139,253,0.30), rgba(61,139,253,0.14))', fg:'#8FC0FF' },
+    { bg:'linear-gradient(135deg, rgba(48,209,88,0.30), rgba(48,209,88,0.14))', fg:'#7CE49A' },
+    { bg:'linear-gradient(135deg, rgba(255,159,10,0.30), rgba(255,159,10,0.14))', fg:'#FFC66B' },
+  ];
+
+  avatar(av, size) {
+    const p = this.avPalette[av % 3];
+    return `width:${size}px;height:${size}px;flex:none;border-radius:999px;background:${p.bg};border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:${size*0.36}px;font-weight:700;letter-spacing:-0.01em;color:${p.fg};`;
+  }
+
+  icon(name, filled) {
+    const c = 'currentColor';
+    if (name === 'today') return filled
+      ? `<svg width="26" height="26" viewBox="0 0 24 24" fill="${c}"><rect x="3" y="4.5" width="18" height="16" rx="4"/><rect x="3" y="4.5" width="18" height="4.5" rx="2" fill="#0A0D12" opacity="0.001"/></svg>`
+      : `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.9"><rect x="3.5" y="5" width="17" height="15" rx="3.5"/><line x1="3.5" y1="9.5" x2="20.5" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6"/><line x1="16" y1="2.5" x2="16" y2="6"/></svg>`;
+    if (name === 'plan') return `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.9" stroke-linecap="round"><line x1="9" y1="7" x2="20" y2="7"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="17" x2="20" y2="17"/><circle cx="4.5" cy="7" r="1.3" fill="${c}"/><circle cx="4.5" cy="12" r="1.3" fill="${c}"/><circle cx="4.5" cy="17" r="1.3" fill="${c}"/></svg>`;
+    if (name === 'stats') return `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.9" stroke-linecap="round"><rect x="4" y="12" width="4" height="7" rx="1.4" fill="${c}"/><rect x="10" y="7" width="4" height="12" rx="1.4" fill="${c}" opacity="0.55"/><rect x="16" y="9.5" width="4" height="9.5" rx="1.4" fill="${c}"/></svg>`;
+    if (name === 'friends') return filled
+      ? `<svg width="26" height="26" viewBox="0 0 24 24" fill="${c}"><circle cx="9" cy="8.5" r="3.4"/><path d="M3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5z"/><circle cx="17" cy="7.5" r="2.6" opacity="0.6"/><path d="M15.5 13.6c2.8.2 5 2.2 5 5.4h-4" opacity="0.6"/></svg>`
+      : `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.9"><circle cx="9" cy="8.5" r="3"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="17" cy="7.8" r="2.3" opacity="0.6"/><path d="M15.8 13.4c2.4.3 4.2 2.1 4.2 4.6" opacity="0.6"/></svg>`;
+    return `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.9"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c0-3.6 3.1-6 7.5-6s7.5 2.4 7.5 6"/></svg>`;
+  }
+
+  bump(id) {
+    this.setState(s => ({ feed: s.feed.map(f => f.id === id ? { ...f, bumps: f.bumped ? f.bumps - 1 : f.bumps + 1, bumped: !f.bumped, pulse: !f.bumped } : f) }));
+    setTimeout(() => this.setState(s => ({ feed: s.feed.map(f => f.id === id ? { ...f, pulse:false } : f) })), 340);
+  }
+
+  accept(id) {
+    this.setState(s => {
+      const rq = s.requests.find(r => r.id === id);
+      const friends = rq ? [{ id:'nf'+id, name:rq.name, initials:rq.initials, av:rq.av, streak:1, meta:'New friend · say hi' }, ...s.friends] : s.friends;
+      return { requests: s.requests.filter(r => r.id !== id), friends };
+    });
+  }
+  decline(id) { this.setState(s => ({ requests: s.requests.filter(r => r.id !== id) })); }
+  addResult(id) { this.setState(s => ({ results: s.results.map(r => r.id === id ? { ...r, added:true } : r) })); }
+
+  renderVals() {
+    const s = this.state;
+    const seg = s.seg;
+
+    const feed = s.feed.map(f => ({
+      ...f,
+      avStyle: this.avatar(f.av, 44),
+      cardStyle: 'background:#171C24;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:14px 16px;' + (f.badge ? 'border-left:3px solid #30D158;' : ''),
+      ctxBg: f.badge ? 'rgba(48,209,88,0.14)' : 'rgba(255,255,255,0.05)',
+      ctxFg: f.badge ? '#7CE49A' : '#C6CDD8',
+      pulseAnim: f.pulse ? 'bumpPulse .34s ease' : 'none',
+      bumpBg: f.bumped ? 'rgba(48,209,88,0.16)' : 'rgba(255,255,255,0.06)',
+      bumpBorder: f.bumped ? 'rgba(48,209,88,0.3)' : 'rgba(255,255,255,0.08)',
+      bumpFg: f.bumped ? '#7CE49A' : '#9AA3AF',
+      onBump: () => this.bump(f.id),
+    }));
+
+    const requests = s.requests.map(r => ({
+      ...r, avStyle: this.avatar(r.av, 44),
+      onAccept: () => this.accept(r.id),
+      onDecline: () => this.decline(r.id),
+    }));
+
+    const friends = s.friends.map((f, i) => ({
+      ...f, avStyle: this.avatar(f.av, 40),
+      rowStyle: 'display:flex;align-items:center;gap:12px;padding:12px 14px;transition:background .15s ease;' + (i < s.friends.length-1 ? 'border-bottom:1px solid rgba(255,255,255,0.08);' : ''),
+    }));
+
+    const results = s.results.map(r => ({
+      ...r, avStyle: this.avatar(r.av, 40),
+      btnLabel: r.added ? 'Added' : 'Add',
+      btnStyle: r.added
+        ? 'flex:none;padding:8px 16px;border-radius:999px;border:0;background:rgba(48,209,88,0.16);color:#7CE49A;font-size:13px;font-weight:700;cursor:default;transition:transform .12s ease;'
+        : 'flex:none;padding:8px 18px;border-radius:999px;border:0;background:rgba(61,139,253,0.18);color:#3D8BFD;font-size:13px;font-weight:700;cursor:pointer;transition:transform .12s ease,background .12s ease;',
+      onAdd: () => this.addResult(r.id),
+    }));
+
+    const tabDefs = [ ['Today','today',false], ['Plan','plan',false], ['Stats','stats',false], ['Friends','friends',true], ['Profile','profile',false] ];
+    const tabs = tabDefs.map(([label, key, active]) => ({
+      label, color: active ? '#3D8BFD' : '#5B6472', icon: this.icon(key, active),
+    }));
+
+    return {
+      showSeg: !s.empty,
+      showEmpty: s.empty,
+      showActivity: !s.empty && seg === 'activity',
+      showFriends: !s.empty && seg === 'friends',
+      segShift: seg === 'activity' ? 'translateX(0)' : 'translateX(100%)',
+      actColor: seg === 'activity' ? '#F2F4F7' : '#9AA3AF',
+      frdColor: seg === 'friends' ? '#F2F4F7' : '#9AA3AF',
+      selActivity: () => this.setState({ seg:'activity' }),
+      selFriends: () => this.setState({ seg:'friends' }),
+      devLabel: s.empty ? '● Show populated' : '○ Show empty state',
+      toggleEmpty: () => this.setState(st => ({ empty: !st.empty, sheetOpen:false })),
+      feed, requests, friends, results, tabs,
+      hasRequests: s.requests.length > 0,
+      friendCount: s.friends.length + '',
+      query: s.query,
+      onQuery: (e) => this.setState({ query: e.target.value }),
+      openSheet: () => this.setState({ sheetOpen:true }),
+      closeSheet: () => this.setState({ sheetOpen:false }),
+      shareLink: () => this.setState({ sheetOpen:false }),
+      sheetOpacity: s.sheetOpen ? 1 : 0,
+      sheetPointer: s.sheetOpen ? 'auto' : 'none',
+      sheetShift: s.sheetOpen ? 'translateY(0)' : 'translateY(105%)',
+    };
+  }
+}
+</script>
+</body>
+</html>

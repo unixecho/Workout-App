@@ -51,6 +51,7 @@ Accents:
   --blue:#3D8BFD (primary actions, active states)
   --green:#30D158 (success/completion)
   --amber:#FF9F0A (warnings/caution)
+  --red:#FF453A (destructive only — delete/remove/destructive-confirm, never a general accent)
 Accent tint recipe: accents never fill containers flatly — use 10–18% alpha
 tints as backgrounds (e.g. rgba(61,139,253,0.14)) with the full-strength
 accent as foreground/text; pressed state bumps alpha ~×1.7. Neutral

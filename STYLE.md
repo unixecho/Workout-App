@@ -35,6 +35,7 @@ Exact values pulled from the reference file's `:root` tokens and usage.
 | `--blue` | `#3D8BFD` | Primary accent: actions, eyebrows, active states, figure "bones" |
 | `--green` | `#30D158` | Success: completion, progress ring, cue arrows |
 | `--amber` | `#FF9F0A` | Warning: cautions, warm-up/cool-down icons, band elements |
+| `--red` | `#FF453A` | Destructive only: delete/remove actions, destructive confirm buttons. Never used as a general accent |
 
 ### Accent tint recipe
 

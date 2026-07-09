@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root{
+    --bg:#0A0D12; --bg-elev:#12161D; --card:#171C24;
+    --card-border:rgba(255,255,255,0.06); --hairline:rgba(255,255,255,0.08);
+    --ink:#F2F4F7; --ink-dim:#9AA3AF; --ink-faint:#5B6472;
+    --blue:#3D8BFD; --green:#30D158; --amber:#FF9F0A;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;background:var(--bg);}
+  body{font-family:-apple-system,"SF Pro Text","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;color:var(--ink);}
+  a{color:var(--blue);text-decoration:none;} a:hover{color:#5AA0FF;}
+  button{font-family:inherit;color:inherit;}
+  ::-webkit-scrollbar{width:0;height:0;}
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;animation:none !important;}
+  }
+</style>
+</helmet>
+<div style="position:relative;width:390px;height:844px;overflow:hidden;background:radial-gradient(ellipse 80% 40% at 85% -5%, rgba(61,139,253,0.13), transparent 60%),radial-gradient(ellipse 70% 35% at 10% 108%, rgba(48,209,88,0.08), transparent 60%),var(--bg);color:var(--ink);">
+
+  <div style="position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:none;z-index:1;padding-bottom:calc(env(safe-area-inset-bottom) + 100px);">
+
+    <div style="position:sticky;top:0;z-index:20;padding:calc(env(safe-area-inset-top) + 10px) 20px 16px;background:linear-gradient(to bottom, rgba(10,13,18,0.96) 60%, rgba(10,13,18,0));backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);">
+      <button style="display:inline-flex;align-items:center;gap:2px;background:transparent;border:none;padding:4px 6px 4px 0;margin-bottom:8px;cursor:pointer;transition:opacity .15s ease;" style-active="{{ pressStyle }}">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3D8BFD" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+        <span style="font-size:17px;font-weight:500;color:var(--blue);letter-spacing:-0.01em;">Stats</span>
+      </button>
+      <div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;line-height:1.05;">Badges</div>
+      <div style="font-size:15px;font-weight:500;color:var(--ink-dim);margin-top:4px;">14 of 18 earned</div>
+    </div>
+
+    <div style="padding:0 20px;">
+      <sc-for list="{{ sections }}" as="section" hint-placeholder-count="5">
+        <div style="margin-top:26px;">
+          <div style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-faint);margin:0 2px 14px;">{{ section.title }}</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px 8px;">
+            <sc-for list="{{ section.badges }}" as="badge" hint-placeholder-count="3">
+              <button onClick="{{ badge.open }}" style="background:transparent;border:none;padding:8px 2px 8px;border-radius:14px;display:flex;flex-direction:column;align-items:stretch;cursor:pointer;transition:transform .12s ease, background .12s ease;" style-active="{{ tileActive }}">
+                <div style="{{ badge.circleStyle }}">
+                  <sc-if value="{{ badge.t_flame }}" hint-placeholder-val="{{ true }}"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="{{ badge.strokeColor }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg></sc-if>
+                  <sc-if value="{{ badge.t_trophy }}"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="{{ badge.strokeColor }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg></sc-if>
+                  <sc-if value="{{ badge.t_dumbbell }}"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="{{ badge.strokeColor }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6"></path><path d="M7 6v12"></path><path d="M7 12h10"></path><path d="M17 6v12"></path><path d="M20 9v6"></path></svg></sc-if>
+                  <sc-if value="{{ badge.t_users }}"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="{{ badge.strokeColor }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></sc-if>
+                  <sc-if value="{{ badge.t_star }}"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="{{ badge.strokeColor }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"></path></svg></sc-if>
+                </div>
+                <div style="{{ badge.nameStyle }}">{{ badge.name }}</div>
+                <sc-if value="{{ badge.showCap }}"><div style="font-size:11px;font-weight:500;color:var(--ink-faint);text-align:center;margin-top:4px;">{{ badge.earnedCap }}</div></sc-if>
+                <sc-if value="{{ badge.showProgress }}">
+                  <div style="width:46px;height:4px;border-radius:999px;background:var(--card);margin:7px auto 0;overflow:hidden;">
+                    <div style="{{ badge.barFillStyle }}"></div>
+                  </div>
+                  <div style="font-size:11px;font-weight:600;color:var(--ink-dim);text-align:center;margin-top:5px;font-variant-numeric:tabular-nums;">{{ badge.hint }}</div>
+                </sc-if>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+  </div>
+
+  <div style="position:absolute;bottom:0;left:0;right:0;z-index:30;height:calc(env(safe-area-inset-bottom) + 62px);padding:0 8px calc(env(safe-area-inset-bottom)) 8px;display:flex;align-items:center;justify-content:space-around;background:rgba(12,16,22,0.82);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--hairline);">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-faint);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><span style="font-size:10.5px;font-weight:600;">Today</span></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-faint);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M3 6h.01M3 12h.01M3 18h.01"></path></svg><span style="font-size:10.5px;font-weight:600;">Plan</span></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--blue);"><svg width="24" height="24" viewBox="0 0 24 24" fill="#3D8BFD" stroke="#3D8BFD" stroke-width="1.5" stroke-linejoin="round"><rect x="3" y="13" width="4" height="7" rx="1"></rect><rect x="10" y="8" width="4" height="12" rx="1"></rect><rect x="17" y="4" width="4" height="16" rx="1"></rect></svg><span style="font-size:10.5px;font-weight:700;">Stats</span></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-faint);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg><span style="font-size:10.5px;font-weight:600;">Friends</span></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-faint);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"></path></svg><span style="font-size:10.5px;font-weight:600;">Profile</span></div>
+  </div>
+
+  <div onClick="{{ closeSheet }}" style="{{ backdropStyle }}"></div>
+
+  <div style="{{ sheetStyle }}">
+    <div style="width:38px;height:5px;border-radius:999px;background:var(--hairline);margin:10px auto 4px;"></div>
+    <div style="padding:18px 24px calc(env(safe-area-inset-bottom) + 24px);display:flex;flex-direction:column;align-items:center;">
+      <div style="{{ ob.circleStyleLarge }}">
+        <sc-if value="{{ ob.t_flame }}"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="{{ ob.strokeColor }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg></sc-if>
+        <sc-if value="{{ ob.t_trophy }}"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="{{ ob.strokeColor }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg></sc-if>
+        <sc-if value="{{ ob.t_dumbbell }}"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="{{ ob.strokeColor }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6"></path><path d="M7 6v12"></path><path d="M7 12h10"></path><path d="M17 6v12"></path><path d="M20 9v6"></path></svg></sc-if>
+        <sc-if value="{{ ob.t_users }}"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="{{ ob.strokeColor }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></sc-if>
+        <sc-if value="{{ ob.t_star }}"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="{{ ob.strokeColor }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"></path></svg></sc-if>
+      </div>
+      <div style="{{ ob.eyebrowStyle }}">{{ ob.eyebrow }}</div>
+      <div style="font-size:22px;font-weight:800;letter-spacing:-0.02em;margin-top:6px;text-align:center;">{{ ob.name }}</div>
+      <div style="font-size:15px;font-weight:400;line-height:1.5;color:var(--ink-dim);margin-top:8px;text-align:center;max-width:280px;">{{ ob.desc }}</div>
+
+      <sc-if value="{{ ob.showProgress }}">
+        <div style="width:100%;background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:16px;margin-top:22px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;">
+            <span style="font-size:15px;font-weight:700;">Progress</span>
+            <span style="font-size:22px;font-weight:800;color:var(--blue);font-variant-numeric:tabular-nums;">{{ ob.hint }}</span>
+          </div>
+          <div style="width:100%;height:8px;border-radius:999px;background:rgba(255,255,255,0.06);overflow:hidden;">
+            <div style="{{ ob.barFillStyleLg }}"></div>
+          </div>
+          <div style="font-size:13px;font-weight:500;color:var(--ink-dim);margin-top:12px;">{{ ob.projLine }}</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ ob.earned }}">
+        <div style="width:100%;background:rgba(48,209,88,0.12);border-radius:12px;padding:13px 16px;margin-top:22px;display:flex;align-items:center;gap:10px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#30D158" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+          <span style="font-size:14px;font-weight:600;color:#B8F0C6;">{{ ob.earnedLine }}</span>
+        </div>
+      </sc-if>
+
+      <button onClick="{{ closeSheet }}" style="width:100%;margin-top:22px;padding:14px;border-radius:12px;border:none;background:rgba(255,255,255,0.06);font-size:15px;font-weight:700;color:var(--ink);cursor:pointer;transition:transform .12s ease, background .12s ease;" style-active="{{ closeActive }}">Close</button>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844}}">
+class Component extends DCLogic {
+  state = { open: null, content: null };
+
+  openBadge(i){
+    this.setState({ open: i, content: this.flat[i] });
+  }
+  closeSheet(){
+    this.setState({ open: null });
+  }
+
+  renderVals(){
+    const grad = {
+      blue:'linear-gradient(145deg,#5AA0FF 0%,#2E6FD6 100%)',
+      green:'linear-gradient(145deg,#4BE07A 0%,#1FA344 100%)',
+      amber:'linear-gradient(145deg,#FFC061 0%,#F08C00 100%)'
+    };
+    const glow = {
+      blue:'0 8px 20px rgba(46,111,214,0.40), inset 0 1px 0 rgba(255,255,255,0.30)',
+      green:'0 8px 20px rgba(31,163,68,0.38), inset 0 1px 0 rgba(255,255,255,0.30)',
+      amber:'0 8px 20px rgba(240,140,0,0.38), inset 0 1px 0 rgba(255,255,255,0.30)'
+    };
+
+    const data = [
+      { title:'Streaks', badges:[
+        { name:'7-Day Streak', icon:'flame', accent:'amber', earned:true, date:'Jun 2', desc:'Work out on 7 consecutive days.' },
+        { name:'14-Day Streak', icon:'flame', accent:'amber', earned:true, date:'Jun 9', desc:'Work out on 14 consecutive days.' },
+        { name:'30-Day Streak', icon:'flame', accent:'amber', cur:23, total:30, desc:'Complete a 30-day streak.', proj:'~Aug 3' },
+      ]},
+      { title:'Milestones', badges:[
+        { name:'First Workout', icon:'trophy', accent:'blue', earned:true, date:'Mar 14', desc:'Log your very first workout.' },
+        { name:'50 Workouts', icon:'trophy', accent:'blue', earned:true, date:'Jun 20', desc:'Log 50 total workouts.' },
+        { name:'100 Workouts', icon:'trophy', accent:'blue', cur:82, total:100, desc:'Log 100 total workouts.', proj:'~Aug 18' },
+      ]},
+      { title:'Volume', badges:[
+        { name:'10K Club', icon:'dumbbell', accent:'green', earned:true, date:'Apr 2', desc:'Lift 10,000 lbs of total volume.' },
+        { name:'100K Club', icon:'dumbbell', accent:'green', earned:true, date:'Jun 28', desc:'Lift 100,000 lbs of total volume.' },
+        { name:'Half Million', icon:'dumbbell', accent:'green', cur:340, total:500, hint:'340K/500K', desc:'Lift 500,000 lbs of total volume.', proj:'~Sep 12' },
+      ]},
+      { title:'Social', badges:[
+        { name:'First Friend', icon:'users', accent:'blue', earned:true, date:'Apr 10', desc:'Add your first training partner.' },
+        { name:'Squad of 5', icon:'users', accent:'blue', earned:true, date:'May 5', desc:'Build a crew of 5 friends.' },
+        { name:'Workout Buddy', icon:'users', accent:'blue', earned:true, date:'Jun 1', desc:'Train live alongside a friend.' },
+      ]},
+      { title:'Special', badges:[
+        { name:'Early Bird', icon:'star', accent:'green', earned:true, date:'Apr 22', desc:'Finish a workout before 6:00 AM.' },
+        { name:'Night Owl', icon:'star', accent:'green', earned:true, date:'May 18', desc:'Finish a workout after 10:00 PM.' },
+        { name:'Comeback Kid', icon:'star', accent:'green', earned:true, date:'Jun 15', desc:'Return after a 2-week break.' },
+        { name:'Perfect Week', icon:'star', accent:'green', earned:true, date:'Jun 30', desc:'Hit every scheduled session in a week.' },
+        { name:'PR Machine', icon:'star', accent:'green', earned:true, date:'Jul 2', desc:'Set 5 personal records in one week.' },
+        { name:'Secret', icon:'star', accent:'green', secret:true, desc:'Keep training to discover this badge.' },
+      ]},
+    ];
+
+    const flat = [];
+    let gi = 0;
+
+    const iconFlags = (icon) => ({
+      t_flame: icon==='flame', t_trophy: icon==='trophy',
+      t_dumbbell: icon==='dumbbell', t_users: icon==='users', t_star: icon==='star'
+    });
+
+    const sections = data.map(sec => ({
+      title: sec.title,
+      badges: sec.badges.map(b => {
+        const idx = gi++;
+        const earned = !!b.earned;
+        const secret = !!b.secret;
+        const total = b.total, cur = b.cur;
+        const pct = total ? Math.round((cur/total)*100) : 0;
+        const hint = b.hint || (total ? (cur+'/'+total) : '');
+
+        const baseCircle = {
+          width:'64px', height:'64px', borderRadius:'999px',
+          display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto'
+        };
+        const circleStyle = earned
+          ? Object.assign({}, baseCircle, { background: grad[b.accent], boxShadow: glow[b.accent] })
+          : Object.assign({}, baseCircle, { background:'rgba(91,100,114,0.14)', border:'1px solid rgba(255,255,255,0.06)', boxShadow:'inset 0 1px 0 rgba(255,255,255,0.05)' });
+
+        const circleStyleLarge = earned
+          ? { width:'96px', height:'96px', borderRadius:'999px', display:'flex', alignItems:'center', justifyContent:'center', background: grad[b.accent], boxShadow: glow[b.accent] }
+          : { width:'96px', height:'96px', borderRadius:'999px', display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(91,100,114,0.14)', border:'1px solid rgba(255,255,255,0.06)' };
+
+        const strokeColor = earned ? '#FFFFFF' : 'rgba(91,100,114,0.55)';
+
+        const flags = iconFlags(b.icon);
+
+        flat[idx] = Object.assign({
+          name: secret ? '???' : b.name,
+          desc: b.desc,
+          earned, secret,
+          strokeColor: earned ? '#FFFFFF' : 'rgba(154,163,175,0.5)',
+          circleStyleLarge,
+          eyebrow: earned ? 'EARNED' : (secret ? 'LOCKED' : 'IN PROGRESS'),
+          eyebrowStyle: {
+            fontSize:'13px', fontWeight:'600', textTransform:'uppercase', letterSpacing:'0.06em', marginTop:'18px',
+            color: earned ? 'var(--green)' : (secret ? 'var(--ink-faint)' : 'var(--blue)')
+          },
+          showProgress: (!earned && !secret),
+          hint,
+          barFillStyleLg: { width: pct+'%', height:'100%', background:'var(--blue)', borderRadius:'999px', transition:'width .5s ease' },
+          projLine: (!earned && !secret && b.proj) ? ('At this pace: '+b.proj) : '',
+          earnedLine: earned ? ('Earned '+b.date) : ''
+        }, flags);
+
+        return Object.assign({
+          idx,
+          name: secret ? '???' : b.name,
+          circleStyle,
+          strokeColor,
+          nameStyle: {
+            fontSize:'12.5px', fontWeight:'600', letterSpacing:'-0.01em', textAlign:'center',
+            marginTop:'10px', lineHeight:'1.25',
+            color: earned ? 'var(--ink)' : (secret ? 'var(--ink-faint)' : 'var(--ink-dim)')
+          },
+          earnedCap: earned ? ('Earned '+b.date) : '',
+          showCap: earned,
+          showProgress: (!earned && !secret),
+          hint,
+          barFillStyle: { width: pct+'%', height:'100%', background:'var(--blue)', borderRadius:'999px', transition:'width .5s ease' },
+          open: () => this.openBadge(idx)
+        }, flags);
+      })
+    }));
+
+    this.flat = flat;
+
+    const isOpen = this.state.open !== null;
+    const ob = this.state.content || {};
+
+    return {
+      sections,
+      ob,
+      closeSheet: () => this.closeSheet(),
+      pressStyle: { opacity: 0.5 },
+      tileActive: { transform:'scale(0.95)', background:'rgba(255,255,255,0.04)' },
+      closeActive: { transform:'scale(0.98)', background:'rgba(255,255,255,0.16)' },
+      backdropStyle: {
+        position:'absolute', inset:0, zIndex:35, background:'rgba(0,0,0,0.5)',
+        opacity: isOpen ? 1 : 0, pointerEvents: isOpen ? 'auto' : 'none',
+        transition:'opacity .3s ease'
+      },
+      sheetStyle: {
+        position:'absolute', left:0, right:0, bottom:0, zIndex:40,
+        background:'var(--bg-elev)', borderRadius:'24px 24px 0 0',
+        borderTop:'1px solid var(--hairline)', boxShadow:'0 -12px 40px rgba(0,0,0,0.5)',
+        transform: isOpen ? 'translateY(0)' : 'translateY(110%)',
+        transition:'transform .38s cubic-bezier(.4,0,.2,1)'
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

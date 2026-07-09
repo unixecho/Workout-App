@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#0A0D12;}
+  body{font-family:-apple-system,"SF Pro Text","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+  button{font-family:inherit;}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes popIn{0%{opacity:0;transform:scale(.85) translateY(8px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+  @keyframes burst{0%{transform:scale(.6);filter:drop-shadow(0 0 0 rgba(48,209,88,0))}60%{transform:scale(1.08);filter:drop-shadow(0 0 26px rgba(48,209,88,.55))}100%{transform:scale(1);filter:drop-shadow(0 0 14px rgba(48,209,88,.3))}}
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;}}
+</style>
+</helmet>
+<div style="position:relative;height:100dvh;overflow-y:auto;overscroll-behavior-y:none;-webkit-tap-highlight-color:transparent;color:#F2F4F7;font-family:-apple-system,'SF Pro Text','SF Pro Display',system-ui,sans-serif;background:radial-gradient(ellipse 80% 40% at 85% -5%, rgba(61,139,253,0.13), transparent 60%),radial-gradient(ellipse 70% 35% at 10% 108%, rgba(48,209,88,0.08), transparent 60%),#0A0D12;">
+
+  <div style="position:sticky;top:0;z-index:20;padding:calc(env(safe-area-inset-top) + 12px) 20px 18px;background:linear-gradient(180deg, rgba(10,13,18,0.96) 55%, rgba(10,13,18,0.55) 82%, transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <button style="width:36px;height:36px;border-radius:999px;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;background:rgba(255,255,255,0.06);color:#F2F4F7;font-size:15px;display:flex;align-items:center;justify-content:center;" style-active="background: rgba(255,255,255,0.16); transform: scale(0.94);">✕</button>
+      <button style="width:36px;height:36px;border-radius:999px;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;background:rgba(255,255,255,0.06);color:#F2F4F7;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;padding-bottom:6px;" style-active="background: rgba(255,255,255,0.16); transform: scale(0.94);">⋯</button>
+    </div>
+    <div style="font-size:13px;font-weight:600;letter-spacing:0.02em;text-transform:uppercase;color:#3D8BFD;">Power Builder · Week 3</div>
+    <div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;margin-top:4px;">Leg Day</div>
+    <div style="font-size:15px;font-weight:500;color:#9AA3AF;margin-top:2px;">Legs &amp; Glutes · ~38 min</div>
+  </div>
+
+  <div style="padding:4px 16px calc(env(safe-area-inset-bottom) + 44px);">
+
+    <div style="background:#171C24;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:16px;display:flex;align-items:center;gap:16px;">
+      <div style="position:relative;width:64px;height:64px;flex-shrink:0;">
+        <svg width="64" height="64" viewBox="0 0 64 64" style="transform:rotate(-90deg);">
+          <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"></circle>
+          <circle cx="32" cy="32" r="28" fill="none" stroke="#30D158" stroke-width="6" stroke-linecap="round" stroke-dasharray="{{ ringCirc }}" stroke-dashoffset="{{ ringOffset }}" style="transition: stroke-dashoffset .5s ease;"></circle>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;">{{ ringDone }}<span style="color:#5B6472;font-weight:700;">/{{ ringTotal }}</span></div>
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:600;letter-spacing:0.02em;text-transform:uppercase;color:#3D8BFD;">Today's session</div>
+        <div style="font-size:17px;font-weight:700;color:#F2F4F7;margin-top:3px;">{{ statusLine }}</div>
+        <div style="font-size:13px;font-weight:500;color:#9AA3AF;margin-top:2px;">Keep the tempo controlled</div>
+      </div>
+    </div>
+
+    <div style="background:#171C24;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;margin-top:16px;">
+      <sc-for list="{{ items }}" as="item" hint-placeholder-count="6">
+        <div style="border-top:{{ item.borderTop }};">
+          <div onClick="{{ item.onToggle }}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;-webkit-tap-highlight-color:transparent;" style-active="background: rgba(255,255,255,0.04);">
+            <div style="width:34px;height:34px;border-radius:10px;background:{{ item.iconTint }};color:{{ item.iconColor }};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;">{{ item.iconLabel }}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:16px;font-weight:600;letter-spacing:-0.01em;color:#F2F4F7;">{{ item.name }}</div>
+              <div style="font-size:12.5px;font-weight:500;color:#9AA3AF;margin-top:2px;">{{ item.meta }}</div>
+            </div>
+            <sc-if value="{{ item.optional }}" hint-placeholder-val="{{ false }}">
+              <span style="font-size:11px;font-weight:700;color:#9AA3AF;background:rgba(255,255,255,0.06);padding:3px 8px;border-radius:999px;">Optional</span>
+            </sc-if>
+            <sc-if value="{{ item.done }}" hint-placeholder-val="{{ false }}">
+              <span style="color:#30D158;font-size:15px;font-weight:700;">✓</span>
+            </sc-if>
+            <span style="color:#5B6472;font-size:18px;transition:transform .3s cubic-bezier(.4,0,.2,1);transform:{{ item.chevronRot }};">›</span>
+          </div>
+
+          <div style="display:grid;grid-template-rows:{{ item.gridRows }};transition:grid-template-rows .35s cubic-bezier(.4,0,.2,1);">
+            <div style="overflow:hidden;min-height:0;">
+              <div style="padding:2px 16px 16px;">
+
+                <sc-if value="{{ item.hasDemo }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:relative;background:#12161D;border:1px solid rgba(255,255,255,0.06);border-radius:14px;overflow:hidden;">
+                    <div style="position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 50% 35%, rgba(61,139,253,0.16), transparent 60%);"></div>
+                    <svg viewBox="0 0 200 175" width="100%" style="display:block;height:184px;position:relative;">
+                      <line id="squat-floor" x1="24" y1="150" x2="176" y2="150" stroke="rgba(255,255,255,0.10)" stroke-width="2" stroke-linecap="round"></line>
+                      <line id="squat-shin" stroke="#3D8BFD" stroke-width="7" stroke-linecap="round"></line>
+                      <line id="squat-thigh" stroke="#3D8BFD" stroke-width="7" stroke-linecap="round"></line>
+                      <line id="squat-torso" stroke="#3D8BFD" stroke-width="7" stroke-linecap="round"></line>
+                      <line id="squat-arm" stroke="#3D8BFD" stroke-width="6" stroke-linecap="round" opacity="0.7"></line>
+                      <circle id="squat-head" r="9" fill="#3D8BFD"></circle>
+                    </svg>
+                    <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:0 12px 12px;">
+                      <svg width="16" height="16" viewBox="0 0 16 16"><path d="M11 3 L5 8 L11 13" fill="none" stroke="#30D158" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                      <span style="font-size:13px;font-weight:600;color:#9AA3AF;">Hips <b style="color:#F2F4F7;">back and down</b> · chest up</span>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ item.isReps }}" hint-placeholder-val="{{ true }}">
+                  <div style="background:#12161D;border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:16px;margin-top:12px;">
+                    <div style="display:flex;gap:6px;justify-content:center;">
+                      <sc-for list="{{ item.dots }}" as="dot" hint-placeholder-count="3">
+                        <span style="width:7px;height:7px;border-radius:999px;background:{{ dot.c }};transition:background .2s ease;"></span>
+                      </sc-for>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-top:14px;">
+                      <button onClick="{{ item.onMinus }}" style="width:44px;height:44px;border-radius:999px;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;background:rgba(255,255,255,0.08);color:#F2F4F7;font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center;padding-bottom:3px;" style-active="background: rgba(255,255,255,0.16); transform: scale(0.94);">−</button>
+                      <div style="font-size:38px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;min-width:120px;text-align:center;">{{ item.repsLabel }}</div>
+                      <button onClick="{{ item.onPlus }}" style="width:44px;height:44px;border-radius:999px;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;background:rgba(61,139,253,0.18);color:#3D8BFD;font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center;padding-bottom:3px;" style-active="background: rgba(61,139,253,0.30); transform: scale(0.94);">+</button>
+                    </div>
+                    <div style="text-align:center;font-size:12.5px;font-weight:600;color:#9AA3AF;margin-top:8px;">{{ item.setLabel }}</div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ item.isTimer }}" hint-placeholder-val="{{ false }}">
+                  <div style="background:#12161D;border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:16px;margin-top:12px;">
+                    <div style="display:flex;gap:6px;justify-content:center;">
+                      <sc-for list="{{ item.dots }}" as="dot" hint-placeholder-count="3">
+                        <span style="width:7px;height:7px;border-radius:999px;background:{{ dot.c }};transition:background .2s ease;"></span>
+                      </sc-for>
+                    </div>
+                    <div style="text-align:center;font-size:38px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;margin-top:12px;">{{ item.timerLabel }}</div>
+                    <div style="text-align:center;font-size:12.5px;font-weight:600;color:#9AA3AF;margin-top:4px;">{{ item.setLabel }}</div>
+                    <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
+                      <button onClick="{{ item.onStart }}" style="border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;background:rgba(61,139,253,0.18);color:#3D8BFD;font-size:14px;font-weight:700;padding:10px 22px;border-radius:999px;" style-active="background: rgba(61,139,253,0.30); transform: scale(0.96);">{{ item.startLabel }}</button>
+                      <button onClick="{{ item.onReset }}" style="border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;background:rgba(255,255,255,0.06);color:#F2F4F7;font-size:14px;font-weight:700;padding:10px 22px;border-radius:999px;" style-active="background: rgba(255,255,255,0.16); transform: scale(0.96);">Reset</button>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ showCues }}" hint-placeholder-val="{{ true }}">
+                  <div style="background:rgba(61,139,253,0.10);border-radius:12px;padding:12px 14px;margin-top:12px;font-size:14px;line-height:1.5;color:#CFE3FF;"><b style="color:#3D8BFD;">Form — </b>Sit back like reaching for a chair behind you; drive knees out and keep your chest tall.</div>
+                  <div style="background:rgba(255,159,10,0.10);border-radius:12px;padding:12px 14px;margin-top:8px;font-size:14px;line-height:1.5;color:#FFE3B8;"><b style="color:#FF9F0A;">Watch for — </b>knees caving inward at the bottom of the rep.</div>
+                </sc-if>
+
+                <button onClick="{{ item.onComplete }}" style="margin-top:12px;width:100%;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;background:{{ item.btnBg }};color:{{ item.btnColor }};font-size:15px;font-weight:700;padding:14px;border-radius:12px;transition:background .2s ease,color .2s ease;" style-active="transform: scale(0.98);">{{ item.btnLabel }}</button>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="text-align:center;font-size:12.5px;font-weight:500;color:#5B6472;margin-top:20px;line-height:1.5;padding:0 20px;">Stop if you feel sharp pain. Rest 60–90s between sets and keep water within reach.</div>
+
+  </div>
+
+  <sc-if value="{{ celebrate }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:100;background:rgba(10,13,18,0.86);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top) + 20px) 28px calc(env(safe-area-inset-bottom) + 24px);animation:fadeIn .3s ease;">
+      <div style="animation:burst .6s cubic-bezier(.34,1.56,.64,1);">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(48,209,88,0.18)" stroke-width="8"></circle>
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#30D158" stroke-width="8" stroke-linecap="round" transform="rotate(-90 60 60)" stroke-dasharray="326.7" stroke-dashoffset="0"></circle>
+          <path d="M40 62 L54 76 L82 44" fill="none" stroke="#30D158" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </div>
+      <div style="font-size:26px;font-weight:800;letter-spacing:-0.02em;color:#F2F4F7;margin-top:22px;animation:rise .5s .1s both;">Workout complete 💪</div>
+      <div style="font-size:14px;font-weight:500;color:#9AA3AF;margin-top:6px;animation:rise .5s .18s both;">6 exercises · 34 min · 142 reps</div>
+      <div style="width:100%;max-width:320px;margin-top:24px;display:flex;flex-direction:column;gap:10px;">
+        <sc-for list="{{ badges }}" as="badge" hint-placeholder-count="2">
+          <div style="opacity:0;display:flex;align-items:center;gap:12px;background:#171C24;border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:12px 14px;animation:popIn .5s cubic-bezier(.34,1.56,.64,1) forwards;animation-delay:{{ badge.delay }};">
+            <div style="width:40px;height:40px;border-radius:12px;background:{{ badge.tint }};display:flex;align-items:center;justify-content:center;font-size:20px;">{{ badge.icon }}</div>
+            <div style="flex:1;">
+              <div style="font-size:15px;font-weight:700;color:#F2F4F7;">{{ badge.name }}</div>
+              <div style="font-size:12.5px;font-weight:600;color:#9AA3AF;">Badge earned</div>
+            </div>
+            <span style="font-size:11px;font-weight:700;color:#FF9F0A;background:rgba(255,159,10,0.14);padding:4px 8px;border-radius:999px;">New!</span>
+          </div>
+        </sc-for>
+      </div>
+      <button onClick="{{ onCloseCelebrate }}" style="margin-top:26px;width:100%;max-width:320px;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;background:rgba(61,139,253,0.18);color:#3D8BFD;font-size:15px;font-weight:700;padding:15px;border-radius:12px;animation:rise .5s .55s both;" style-active="transform: scale(0.98); background: rgba(61,139,253,0.30);">Done</button>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844},&quot;initialOpen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;Back Squat&quot;,&quot;options&quot;:[&quot;Dynamic Warm-Up&quot;,&quot;Back Squat&quot;,&quot;Romanian Deadlift&quot;,&quot;Walking Lunge&quot;,&quot;Plank Hold&quot;,&quot;Cool-Down Stretch&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;showFormCues&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    const defs=[
+      {name:'Dynamic Warm-Up', meta:'5:00 · mobility', type:'timer', sets:1, duration:300, remaining:300, running:false, currentSet:1, done:true, hasDemo:false, optional:false},
+      {name:'Back Squat', meta:'3 sets × 12 · barbell', type:'reps', sets:3, target:12, reps:8, currentSet:2, done:false, hasDemo:true, optional:false},
+      {name:'Romanian Deadlift', meta:'3 sets × 10 · barbell', type:'reps', sets:3, target:10, reps:0, currentSet:1, done:false, hasDemo:false, optional:false},
+      {name:'Walking Lunge', meta:'3 sets × 20 · dumbbell', type:'reps', sets:3, target:20, reps:0, currentSet:1, done:false, hasDemo:false, optional:true},
+      {name:'Plank Hold', meta:'3 sets × 30s', type:'timer', sets:3, duration:30, remaining:30, running:false, currentSet:1, done:false, hasDemo:false, optional:false},
+      {name:'Cool-Down Stretch', meta:'4:00 · recovery', type:'timer', sets:1, duration:240, remaining:240, running:false, currentSet:1, done:false, hasDemo:false, optional:false}
+    ];
+    let open=defs.map(d=>d.name).indexOf(this.props.initialOpen);
+    if(open<0) open=1;
+    this.state={exercises:defs, open, celebrate:false};
+  }
+
+  fmt(s){ const m=Math.floor(s/60), r=s%60; return m+':'+String(r).padStart(2,'0'); }
+
+  toggleOpen(i){ this.setState(st=>({open: st.open===i ? -1 : i})); }
+
+  minus(i){ this.setState(st=>{ const ex=st.exercises.map(e=>({...e})); const e=ex[i];
+    if(e.reps>0) e.reps--; else if(e.currentSet>1){ e.currentSet--; e.reps=e.target; }
+    return {exercises:ex}; }); }
+
+  plus(i){ this.setState(st=>{ const ex=st.exercises.map(e=>({...e})); const e=ex[i];
+    if(e.reps<e.target) e.reps++; else if(e.currentSet<e.sets){ e.currentSet++; e.reps=0; }
+    return {exercises:ex}; }); }
+
+  complete(i){ this.setState(st=>{ const ex=st.exercises.map(e=>({...e})); ex[i].done=!ex[i].done; return {exercises:ex}; },
+    ()=>{ this.afterComplete(i); }); }
+
+  afterComplete(i){
+    const ex=this.state.exercises;
+    if(!ex[i].done) return;
+    if(ex.every(e=>e.done)){ setTimeout(()=>this.setState({celebrate:true}), 650); return; }
+    let next=-1;
+    for(let k=i+1;k<ex.length;k++){ if(!ex[k].done){ next=k; break; } }
+    if(next<0){ for(let k=0;k<ex.length;k++){ if(!ex[k].done){ next=k; break; } } }
+    if(next>=0) this.setState({open:next});
+  }
+
+  startTimer(i){
+    if(this.state.exercises[i].running) return;
+    if(this._timer) clearInterval(this._timer);
+    this.setState(st=>{ const ex=st.exercises.map(e=>({...e})); ex[i].running=true; return {exercises:ex}; });
+    this._timer=setInterval(()=>{
+      this.setState(st=>{ const ex=st.exercises.map(e=>({...e})); const e=ex[i];
+        if(e.remaining>1){ e.remaining--; }
+        else { clearInterval(this._timer); this._timer=null; e.remaining=e.duration; e.running=false; if(e.currentSet<e.sets) e.currentSet++; }
+        return {exercises:ex}; });
+    },1000);
+  }
+
+  resetTimer(i){
+    if(this._timer){ clearInterval(this._timer); this._timer=null; }
+    this.setState(st=>{ const ex=st.exercises.map(e=>({...e})); ex[i].remaining=ex[i].duration; ex[i].running=false; return {exercises:ex}; });
+  }
+
+  closeCelebrate(){ this.setState({celebrate:false}); }
+
+  componentDidMount(){
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const ankle=[72,150];
+    const stand={knee:[76,116],hip:[81,80],shoulder:[76,42],head:[74,29],hand:[98,58]};
+    const bottom={knee:[101,120],hip:[54,107],shoulder:[83,77],head:[89,65],hand:[122,90]};
+    const ease=t=>t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+    const L=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
+    const setLine=(id,a,b)=>{ const el=document.getElementById(id); if(!el) return; el.setAttribute('x1',a[0]); el.setAttribute('y1',a[1]); el.setAttribute('x2',b[0]); el.setAttribute('y2',b[1]); };
+    const draw=(d)=>{
+      const knee=L(stand.knee,bottom.knee,d), hip=L(stand.hip,bottom.hip,d), sh=L(stand.shoulder,bottom.shoulder,d), hd=L(stand.head,bottom.head,d), hand=L(stand.hand,bottom.hand,d);
+      setLine('squat-shin',ankle,knee); setLine('squat-thigh',knee,hip); setLine('squat-torso',hip,sh); setLine('squat-arm',sh,hand);
+      const h=document.getElementById('squat-head'); if(h){ h.setAttribute('cx',hd[0]); h.setAttribute('cy',hd[1]); }
+    };
+    if(reduced){ draw(0.85); return; }
+    const dur=3000, start=performance.now();
+    const frame=(now)=>{
+      let tt=((now-start)%dur)/dur, d;
+      if(tt<0.4) d=ease(tt/0.4); else if(tt<0.6) d=1; else d=1-ease((tt-0.6)/0.4);
+      draw(d);
+      this._raf=requestAnimationFrame(frame);
+    };
+    this._raf=requestAnimationFrame(frame);
+  }
+
+  componentWillUnmount(){ if(this._raf) cancelAnimationFrame(this._raf); if(this._timer) clearInterval(this._timer); }
+
+  renderVals(){
+    const ex=this.state.exercises;
+    const total=ex.length;
+    const done=ex.filter(e=>e.done).length;
+    const circ=2*Math.PI*28;
+    const items=ex.map((e,i)=>{
+      const isOpen=this.state.open===i;
+      const dots=[];
+      for(let s=0;s<e.sets;s++){
+        let c = s < e.currentSet-1 ? '#30D158' : (s===e.currentSet-1 ? '#3D8BFD' : '#5B6472');
+        if(e.done) c='#30D158';
+        dots.push({c});
+      }
+      return {
+        i, name:e.name, meta:e.meta, done:e.done, optional:e.optional, hasDemo:e.hasDemo,
+        isReps:e.type==='reps', isTimer:e.type==='timer', isOpen,
+        borderTop: i>0 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+        gridRows: isOpen ? '1fr' : '0fr',
+        chevronRot: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+        repsLabel: e.reps+' / '+e.target,
+        setLabel: 'Set '+e.currentSet+' of '+e.sets,
+        timerLabel: this.fmt(e.remaining),
+        startLabel: e.running ? 'Running…' : 'Start',
+        dots,
+        iconTint: e.done ? 'rgba(48,209,88,0.16)' : 'rgba(61,139,253,0.14)',
+        iconColor: e.done ? '#30D158' : '#3D8BFD',
+        iconLabel: e.done ? '✓' : String(i+1),
+        btnLabel: e.done ? 'Completed' : 'Mark Complete',
+        btnBg: e.done ? 'rgba(48,209,88,0.16)' : 'rgba(255,255,255,0.06)',
+        btnColor: e.done ? '#30D158' : '#F2F4F7',
+        onToggle: ()=>this.toggleOpen(i),
+        onMinus: ()=>this.minus(i),
+        onPlus: ()=>this.plus(i),
+        onStart: ()=>this.startTimer(i),
+        onReset: ()=>this.resetTimer(i),
+        onComplete: ()=>this.complete(i)
+      };
+    });
+    return {
+      items, ringCirc: circ, ringOffset: circ*(1-done/total), ringDone: done, ringTotal: total,
+      statusLine: done+' of '+total+' done',
+      showCues: this.props.showFormCues ?? true,
+      celebrate: this.state.celebrate,
+      badges: [ {icon:'🏆', name:'Squat Milestone', tint:'rgba(255,159,10,0.14)', delay:'0.12s'}, {icon:'🔥', name:'5-Day Streak', tint:'rgba(48,209,88,0.14)', delay:'0.30s'} ],
+      onCloseCelebrate: ()=>this.closeCelebrate()
+    };
+  }
+}
+</script>
+</body>
+</html>

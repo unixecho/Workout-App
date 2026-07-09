@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+:root{
+  --bg:#0A0D12; --bg-elev:#12161D; --card:#171C24;
+  --card-border:rgba(255,255,255,0.06); --hairline:rgba(255,255,255,0.08);
+  --ink:#F2F4F7; --ink-dim:#9AA3AF; --ink-faint:#5B6472;
+  --blue:#3D8BFD; --green:#30D158; --amber:#FF9F0A; --red:#FF453A;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:#0A0D12}
+input{font-family:inherit}
+::-webkit-scrollbar{display:none}
+a{color:var(--blue);text-decoration:none}
+a:hover{color:#6aa6ff}
+@keyframes rup-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</helmet>
+
+<div style="position:relative;width:390px;height:844px;overflow:hidden;background:var(--bg);font-family:-apple-system,'SF Pro Text','SF Pro Display',system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:var(--ink)">
+
+  <!-- ambient glow -->
+  <div style="position:absolute;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 80% 40% at 85% -5%, rgba(61,139,253,0.13), transparent 60%), radial-gradient(ellipse 70% 35% at 10% 108%, rgba(48,209,88,0.08), transparent 60%), var(--bg)"></div>
+
+  <!-- scroll area -->
+  <div style="position:absolute;inset:0;z-index:1;overflow-y:auto;overscroll-behavior-y:none">
+
+    <!-- sticky header -->
+    <div style="position:sticky;top:0;z-index:10;padding:16px 18px 12px;padding-top:22px;background:linear-gradient(to bottom, rgba(10,13,18,0.96) 60%, rgba(10,13,18,0));backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)">
+      <div style="font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--blue)">Weekly Plan</div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-top:5px">
+        <sc-if value="{{ editingName }}" hint-placeholder-val="{{ false }}">
+          <input value="{{ planName }}" autoFocus="{{ true }}" onChange="{{ onNameChange }}" onBlur="{{ commitName }}" onKeyDown="{{ onNameKeyDown }}" style="flex:1;min-width:0;background:transparent;border:none;border-bottom:1.5px solid var(--blue);outline:none;color:var(--ink);font-size:24px;font-weight:800;letter-spacing:-0.02em;padding:0 0 3px;font-family:inherit" />
+        </sc-if>
+        <sc-if value="{{ notEditingName }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ startEdit }}" style-active="opacity:0.55" style="flex:1;min-width:0;display:flex;align-items:center;gap:9px;background:none;border:none;padding:0;cursor:pointer;text-align:left;color:var(--ink)">
+            <span style="font-size:24px;font-weight:800;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ planName }}</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+        </sc-if>
+        <button style-active="transform:scale(0.92);background:rgba(255,255,255,0.16)" style="flex:none;width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;display:flex;align-items:center;justify-content:center;color:var(--ink);cursor:pointer;transition:transform .12s ease,background .12s ease">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
+        </button>
+      </div>
+
+      <!-- week segmented control -->
+      <div style="display:flex;gap:0;background:rgba(255,255,255,0.06);border-radius:999px;padding:3px;margin-top:14px">
+        <button onClick="{{ setThis }}" style="{{ segThisStyle }}">This week</button>
+        <button onClick="{{ setNext }}" style="{{ segNextStyle }}">Next week</button>
+      </div>
+    </div>
+
+    <!-- body -->
+    <div style="padding:6px 16px 108px">
+
+      <!-- settings-changed banner -->
+      <sc-if value="{{ bannerVisible }}" hint-placeholder-val="{{ true }}">
+        <div style="position:relative;background:rgba(255,159,10,0.10);border:1px solid rgba(255,159,10,0.18);border-radius:12px;padding:13px 14px;margin:8px 0 14px;animation:rup-in .3s ease">
+          <div style="font-size:14px;line-height:1.45;color:#FFE3B8;padding-right:22px"><span style="font-weight:700;color:var(--amber)">Heads up — </span>Your training settings changed. Regenerate remaining days?</div>
+          <div style="display:flex;gap:18px;margin-top:11px">
+            <button onClick="{{ openRegen }}" style-active="opacity:0.6" style="background:none;border:none;padding:0;font-size:14px;font-weight:700;color:var(--amber);cursor:pointer">Regenerate</button>
+            <button onClick="{{ dismissBanner }}" style-active="opacity:0.6" style="background:none;border:none;padding:0;font-size:14px;font-weight:600;color:var(--ink-dim);cursor:pointer">Keep as is</button>
+          </div>
+          <button onClick="{{ dismissBanner }}" style-active="opacity:0.5" aria-label="Dismiss" style="position:absolute;top:9px;right:9px;width:24px;height:24px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);cursor:pointer">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </sc-if>
+
+      <!-- day cards -->
+      <sc-for list="{{ days }}" as="item" hint-placeholder-count="7">
+        <div style="{{ item.cardStyle }}">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="flex:none;display:flex;color:var(--ink-faint);cursor:grab" aria-label="Reorder">
+              <svg width="16" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.6"/><circle cx="15" cy="5" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="19" r="1.6"/><circle cx="15" cy="19" r="1.6"/></svg>
+            </span>
+            <span style="font-size:13px;font-weight:700;letter-spacing:0.04em;color:var(--ink-dim)">{{ item.day }}</span>
+            <sc-if value="{{ item.today }}" hint-placeholder-val="{{ false }}">
+              <span style="font-size:11px;font-weight:700;letter-spacing:0.03em;color:var(--blue);background:rgba(61,139,253,0.16);padding:2px 8px;border-radius:999px">TODAY</span>
+            </sc-if>
+            <span style="flex:1"></span>
+            <sc-if value="{{ item.done }}" hint-placeholder-val="{{ false }}">
+              <span style="flex:none;width:22px;height:22px;border-radius:999px;background:rgba(48,209,88,0.16);display:flex;align-items:center;justify-content:center;color:var(--green)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              </span>
+            </sc-if>
+            <button onClick="{{ item.openOptions }}" aria-label="More options" style-active="transform:scale(0.9);background:rgba(255,255,255,0.16)" style="flex:none;width:30px;height:30px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;display:flex;align-items:center;justify-content:center;color:var(--ink-dim);cursor:pointer;transition:transform .12s ease,background .12s ease">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>
+            </button>
+          </div>
+
+          <sc-if value="{{ item.isWorkout }}" hint-placeholder-val="{{ true }}">
+            <div style="margin-left:28px;margin-top:9px">
+              <div style="font-size:16px;font-weight:600;letter-spacing:-0.01em;color:var(--ink)">{{ item.title }}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px">
+                <sc-for list="{{ item.muscles }}" as="m" hint-placeholder-count="3">
+                  <span style="font-size:12px;font-weight:500;color:var(--ink-dim);background:rgba(255,255,255,0.06);padding:3px 9px;border-radius:999px">{{ m }}</span>
+                </sc-for>
+              </div>
+              <div style="font-size:12.5px;font-weight:500;color:var(--ink-faint);margin-top:10px">{{ item.meta }}</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ item.isRest }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-left:28px;margin-top:7px;display:flex;align-items:center;gap:9px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--ink-faint)"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
+              <span style="font-size:15px;font-weight:600;color:var(--ink-dim)">Rest day</span>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+
+      <!-- regenerate week footer -->
+      <button onClick="{{ openRegen }}" style-active="transform:scale(0.98);background:rgba(255,255,255,0.12)" style="width:100%;margin-top:14px;background:rgba(255,255,255,0.06);border:1px solid var(--card-border);border-radius:12px;padding:14px;font-size:15px;font-weight:700;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .15s ease,background .15s ease">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        Regenerate week
+      </button>
+    </div>
+
+    <!-- bottom tab bar -->
+    <div style="position:absolute;bottom:0;left:0;right:0;z-index:20;display:flex;padding:8px 6px 26px;background:rgba(10,13,18,0.72);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--hairline)">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-faint)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="4"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+        <span style="font-size:10.5px;font-weight:600;letter-spacing:0.01em">Today</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--blue)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 9h8M8 13h8M8 17h5" stroke="var(--bg)" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span style="font-size:10.5px;font-weight:700;letter-spacing:0.01em">Plan</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-faint)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <span style="font-size:10.5px;font-weight:600;letter-spacing:0.01em">Stats</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-faint)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.5a3 3 0 0 1 0 5.6M17 20a6 6 0 0 0-4-5.6"/></svg>
+        <span style="font-size:10.5px;font-weight:600;letter-spacing:0.01em">Friends</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-faint)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+        <span style="font-size:10.5px;font-weight:600;letter-spacing:0.01em">Profile</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTIONS SHEET -->
+  <div style="{{ optionsBackdropStyle }}" onClick="{{ closeOptions }}"></div>
+  <div style="{{ optionsSheetStyle }}">
+    <div style="width:36px;height:5px;border-radius:999px;background:rgba(255,255,255,0.22);margin:0 auto 12px"></div>
+    <div style="background:var(--bg-elev);border:1px solid var(--card-border);border-radius:16px;overflow:hidden">
+      <div style="padding:12px 16px 10px;font-size:12.5px;font-weight:600;letter-spacing:0.02em;color:var(--ink-faint);border-bottom:1px solid var(--hairline)">{{ optionsContext }}</div>
+      <button onClick="{{ closeOptions }}" style-active="background:rgba(255,255,255,0.06)" style="width:100%;display:flex;align-items:center;gap:14px;padding:14px 16px;background:none;border:none;border-bottom:1px solid var(--hairline);color:var(--ink);font-size:16px;font-weight:600;text-align:left;cursor:pointer">
+        <span style="flex:none;width:34px;height:34px;border-radius:10px;background:rgba(61,139,253,0.14);display:flex;align-items:center;justify-content:center;color:var(--blue)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M12 13v5M9.5 15.5 12 18l2.5-2.5"/></svg></span>
+        Move to…
+      </button>
+      <button onClick="{{ closeOptions }}" style-active="background:rgba(255,255,255,0.06)" style="width:100%;display:flex;align-items:center;gap:14px;padding:14px 16px;background:none;border:none;border-bottom:1px solid var(--hairline);color:var(--ink);font-size:16px;font-weight:600;text-align:left;cursor:pointer">
+        <span style="flex:none;width:34px;height:34px;border-radius:10px;background:rgba(255,159,10,0.14);display:flex;align-items:center;justify-content:center;color:var(--amber)"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg></span>
+        Convert to rest day
+      </button>
+      <button onClick="{{ closeOptions }}" style-active="background:rgba(255,255,255,0.06)" style="width:100%;display:flex;align-items:center;gap:14px;padding:14px 16px;background:none;border:none;color:var(--ink);font-size:16px;font-weight:600;text-align:left;cursor:pointer">
+        <span style="flex:none;width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;color:var(--ink-dim)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
+        Duplicate to another day
+      </button>
+    </div>
+    <button onClick="{{ closeOptions }}" style-active="transform:scale(0.98);background:rgba(255,255,255,0.10)" style="width:100%;margin-top:8px;background:var(--bg-elev);border:1px solid var(--card-border);border-radius:14px;padding:15px;font-size:16px;font-weight:700;color:var(--blue);cursor:pointer;transition:transform .15s ease,background .15s ease">Cancel</button>
+  </div>
+
+  <!-- REGENERATE CONFIRM SHEET -->
+  <div style="{{ regenBackdropStyle }}" onClick="{{ closeRegen }}"></div>
+  <div style="{{ regenSheetStyle }}">
+    <div style="width:36px;height:5px;border-radius:999px;background:rgba(255,255,255,0.22);margin:0 auto 12px"></div>
+    <div style="background:var(--bg-elev);border:1px solid var(--card-border);border-radius:16px;padding:20px 20px 18px;text-align:center">
+      <div style="font-size:18px;font-weight:700;letter-spacing:-0.01em;color:var(--ink)">Regenerate this week?</div>
+      <div style="font-size:14px;line-height:1.5;color:var(--ink-dim);margin-top:8px">Replaces this week's remaining days. Completed days are kept.</div>
+    </div>
+    <button onClick="{{ closeRegen }}" style-active="transform:scale(0.98);background:rgba(255,69,58,0.28)" style="width:100%;margin-top:8px;background:rgba(255,69,58,0.16);border:1px solid rgba(255,69,58,0.22);border-radius:14px;padding:15px;font-size:16px;font-weight:700;color:var(--red);cursor:pointer;transition:transform .15s ease,background .15s ease">Regenerate</button>
+    <button onClick="{{ closeRegen }}" style-active="transform:scale(0.98);background:rgba(255,255,255,0.10)" style="width:100%;margin-top:8px;background:var(--bg-elev);border:1px solid var(--card-border);border-radius:14px;padding:15px;font-size:16px;font-weight:700;color:var(--blue);cursor:pointer;transition:transform .15s ease,background .15s ease">Cancel</button>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844}}">
+class Component extends DCLogic {
+  state = {
+    planName: 'Push/Pull/Legs Plan',
+    editingName: false,
+    week: 'this',
+    bannerVisible: true,
+    optionsFor: null,
+    regenOpen: false,
+  };
+
+  buildDays(week) {
+    const isThis = week === 'this';
+    const P = (day, title, muscles, duration, count, opts = {}) =>
+      ({ day, title, muscles, duration, count, isWorkout: true, isRest: false, today: false, done: false, ...opts });
+    const R = (day) => ({ day, isRest: true, isWorkout: false, today: false, done: false });
+    let arr;
+    if (isThis) {
+      arr = [
+        P('MON', 'Push Day', ['Chest', 'Shoulders', 'Triceps'], '52 min', 6, { done: true }),
+        P('TUE', 'Pull Day', ['Back', 'Biceps'], '48 min', 6, { done: true }),
+        P('WED', 'Leg Day', ['Quads', 'Hamstrings', 'Glutes'], '58 min', 7, { today: true }),
+        R('THU'),
+        P('FRI', 'Push Day', ['Chest', 'Shoulders', 'Triceps'], '50 min', 6),
+        P('SAT', 'Pull Day', ['Back', 'Biceps', 'Rear Delts'], '45 min', 5),
+        R('SUN'),
+      ];
+    } else {
+      arr = [
+        P('MON', 'Push Day', ['Chest', 'Shoulders', 'Triceps'], '52 min', 6),
+        P('TUE', 'Pull Day', ['Back', 'Biceps'], '48 min', 6),
+        R('WED'),
+        P('THU', 'Leg Day', ['Quads', 'Hamstrings', 'Glutes'], '58 min', 7),
+        P('FRI', 'Push Day', ['Chest', 'Shoulders', 'Triceps'], '50 min', 6),
+        R('SAT'),
+        P('SUN', 'Pull Day', ['Back', 'Biceps', 'Rear Delts'], '45 min', 5),
+      ];
+    }
+    return arr.map((d, i) => ({
+      ...d,
+      index: i,
+      meta: d.isWorkout ? (d.duration + ' · ' + d.count + (d.count === 1 ? ' exercise' : ' exercises')) : '',
+      cardStyle: this.cardStyle(d),
+      openOptions: () => this.openOptions(i, d),
+    }));
+  }
+
+  cardStyle(d) {
+    const base = {
+      background: 'var(--card)',
+      border: '1px solid var(--card-border)',
+      borderRadius: '16px',
+      padding: '14px 16px',
+      marginBottom: '10px',
+    };
+    if (d.today) {
+      base.border = '1px solid rgba(61,139,253,0.55)';
+      base.boxShadow = '0 0 0 1px rgba(61,139,253,0.18), 0 10px 30px rgba(61,139,253,0.10)';
+    }
+    if (d.isRest) base.opacity = '0.72';
+    return base;
+  }
+
+  segStyle(active) {
+    return {
+      flex: '1',
+      border: 'none',
+      cursor: 'pointer',
+      padding: '7px 0',
+      borderRadius: '999px',
+      fontSize: '13px',
+      fontWeight: active ? '700' : '600',
+      fontFamily: 'inherit',
+      transition: 'background .2s ease,color .2s ease',
+      background: active ? 'rgba(255,255,255,0.13)' : 'transparent',
+      color: active ? 'var(--ink)' : 'var(--ink-dim)',
+      boxShadow: active ? '0 1px 2px rgba(0,0,0,0.35)' : 'none',
+    };
+  }
+
+  backdropStyle(open) {
+    return {
+      position: 'absolute', inset: '0', zIndex: 50,
+      background: 'rgba(0,0,0,0.5)',
+      backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
+      transition: 'opacity .3s ease',
+      opacity: open ? 1 : 0,
+      pointerEvents: open ? 'auto' : 'none',
+    };
+  }
+
+  sheetStyle(open) {
+    return {
+      position: 'absolute', left: '8px', right: '8px', bottom: '0', zIndex: 51,
+      paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)',
+      transform: open ? 'translateY(0)' : 'translateY(125%)',
+      transition: 'transform .4s cubic-bezier(.4,0,.2,1)',
+    };
+  }
+
+  startEdit = () => this.setState({ editingName: true });
+  onNameChange = (e) => this.setState({ planName: e.target.value });
+  commitName = () => this.setState({ editingName: false });
+  onNameKeyDown = (e) => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); this.setState({ editingName: false }); } };
+
+  setThis = () => this.setState({ week: 'this' });
+  setNext = () => this.setState({ week: 'next' });
+
+  dismissBanner = () => this.setState({ bannerVisible: false });
+
+  openOptions = (i, d) => this.setState({ optionsFor: { index: i, day: d.day, title: d.isRest ? 'Rest day' : d.title } });
+  closeOptions = () => this.setState({ optionsFor: null });
+
+  openRegen = () => this.setState({ regenOpen: true });
+  closeRegen = () => this.setState({ regenOpen: false });
+
+  renderVals() {
+    const s = this.state;
+    const opt = s.optionsFor;
+    return {
+      planName: s.planName,
+      editingName: s.editingName,
+      notEditingName: !s.editingName,
+      bannerVisible: s.bannerVisible,
+      days: this.buildDays(s.week),
+      segThisStyle: this.segStyle(s.week === 'this'),
+      segNextStyle: this.segStyle(s.week === 'next'),
+      startEdit: this.startEdit,
+      onNameChange: this.onNameChange,
+      commitName: this.commitName,
+      onNameKeyDown: this.onNameKeyDown,
+      setThis: this.setThis,
+      setNext: this.setNext,
+      dismissBanner: this.dismissBanner,
+      closeOptions: this.closeOptions,
+      openRegen: this.openRegen,
+      closeRegen: this.closeRegen,
+      optionsContext: opt ? (opt.day + ' · ' + opt.title) : '',
+      optionsBackdropStyle: this.backdropStyle(!!opt),
+      optionsSheetStyle: this.sheetStyle(!!opt),
+      regenBackdropStyle: this.backdropStyle(s.regenOpen),
+      regenSheetStyle: this.sheetStyle(s.regenOpen),
+    };
+  }
+}
+</script>
+</body>
+</html>

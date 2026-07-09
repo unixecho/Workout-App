@@ -45,3 +45,9 @@ next-env.d.ts
 # IDE
 .idea/
 .vscode/
+
+# Claude Code local-only settings (per-machine permission allowlist)
+.claude/settings.local.json
+
+# Raw Claude Design exports (keep locally, not committed)
+/design src/

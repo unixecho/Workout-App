@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { overscroll-behavior-y: none; -webkit-font-smoothing: antialiased; }
+  a { color: #3D8BFD; text-decoration: none; }
+  a:hover { color: #5AA0FF; }
+  ::-webkit-scrollbar { display: none; }
+  @keyframes growUp { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</helmet>
+
+<div style="position:relative;width:390px;height:844px;margin:0 auto;overflow:hidden;color:#F2F4F7;font-family:-apple-system,'SF Pro Text','SF Pro Display',system-ui,sans-serif;-webkit-tap-highlight-color:transparent;background:radial-gradient(ellipse 80% 40% at 85% -5%, rgba(61,139,253,0.13), transparent 60%),radial-gradient(ellipse 70% 35% at 10% 108%, rgba(48,209,88,0.08), transparent 60%),#0A0D12;">
+
+  <!-- Scroll area -->
+  <div style="position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;">
+
+    <!-- Sticky header -->
+    <div style="position:sticky;top:0;z-index:20;padding:calc(env(safe-area-inset-top) + 10px) 20px 18px;background:linear-gradient(to bottom, rgba(10,13,18,0.96) 55%, rgba(10,13,18,0));backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);">
+      <div style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.02em;color:#3D8BFD;">Your progress</div>
+      <div style="font-size:34px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;margin-top:2px;">Stats</div>
+    </div>
+
+    <div style="padding:0 16px 110px;display:flex;flex-direction:column;gap:16px;">
+
+      <!-- 1. Streak header (no card) -->
+      <div style="display:flex;align-items:center;gap:14px;padding:4px 4px 2px;">
+        <div style="font-size:44px;line-height:1;filter:drop-shadow(0 4px 14px rgba(255,159,10,0.35));">🔥</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:baseline;gap:8px;">
+            <span style="font-size:38px;font-weight:800;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;line-height:1;">12</span>
+            <span style="font-size:15px;font-weight:500;color:#9AA3AF;">day streak</span>
+          </div>
+          <div style="font-size:12.5px;font-weight:600;color:#5B6472;margin-top:4px;">Longest: 28 days</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:rgba(61,139,253,0.14);color:#3D8BFD;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;">
+          <span style="font-size:15px;">❄️</span>×2
+        </div>
+      </div>
+
+      <!-- 2. This week card -->
+      <div style="display:flex;align-items:center;gap:16px;background:#171C24;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:16px;">
+        <div style="position:relative;width:56px;height:56px;flex-shrink:0;">
+          <svg width="56" height="56" viewBox="0 0 56 56" style="transform:rotate(-90deg);">
+            <circle cx="28" cy="28" r="20" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"></circle>
+            <circle cx="28" cy="28" r="20" fill="none" stroke="#30D158" stroke-width="6" stroke-linecap="round" stroke-dasharray="125.66" stroke-dashoffset="25.13" style="transition:stroke-dashoffset .5s ease;"></circle>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;">4/5</div>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:15px;font-weight:700;letter-spacing:-0.01em;">This week</div>
+          <div style="font-size:15px;font-weight:500;color:#9AA3AF;margin-top:3px;">4 of 5 sessions complete</div>
+        </div>
+        <div style="color:#5B6472;">
+          <svg width="9" height="16" viewBox="0 0 9 16" fill="none"><path d="M1 1l6 7-6 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </div>
+      </div>
+
+      <!-- 3. Consistency chart card -->
+      <div style="background:#171C24;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;">
+          <div style="font-size:15px;font-weight:700;letter-spacing:-0.01em;">Consistency</div>
+          <div style="display:flex;gap:2px;padding:2px;border-radius:10px;background:rgba(255,255,255,0.06);">
+            <sc-for list="{{ seg }}" as="s" hint-placeholder-count="3">
+              <div style="{{ s.style }}" onClick="{{ s.onClick }}" style-active="transform:scale(0.96)">{{ s.label }}</div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:6px;height:124px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:0;">
+          <sc-for list="{{ bars }}" as="b" hint-placeholder-count="8">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
+              <div style="width:72%;max-width:30px;height:{{ b.h }};background:#3D8BFD;border-radius:6px 6px 0 0;transform-origin:bottom;animation:growUp .45s cubic-bezier(.4,0,.2,1);"></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:6px;margin-top:8px;">
+          <sc-for list="{{ bars }}" as="b" hint-placeholder-count="8">
+            <div style="flex:1;text-align:center;font-size:11px;font-weight:500;color:#5B6472;font-variant-numeric:tabular-nums;">{{ b.label }}</div>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- 4. Body weight card -->
+      <div style="background:#171C24;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:16px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+          <div>
+            <div style="font-size:15px;font-weight:700;letter-spacing:-0.01em;">Body weight</div>
+            <div style="display:flex;align-items:baseline;gap:6px;margin-top:6px;">
+              <span style="font-size:38px;font-weight:800;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;line-height:1;">176.4</span>
+              <span style="font-size:15px;font-weight:500;color:#9AA3AF;">lbs</span>
+            </div>
+            <div style="font-size:12.5px;font-weight:600;color:#30D158;margin-top:5px;font-variant-numeric:tabular-nums;">▼ 5.6 lbs in 10 wks · goal 172</div>
+          </div>
+          <button style="display:flex;align-items:center;gap:5px;padding:10px 14px;border:none;border-radius:999px;background:rgba(61,139,253,0.14);color:#3D8BFD;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;transition:transform .15s ease, background .15s ease;flex-shrink:0;" style-active="transform:scale(0.96);background:rgba(61,139,253,0.24)">
+            <span style="font-size:16px;line-height:1;">＋</span>Add weigh-in
+          </button>
+        </div>
+        <svg width="100%" height="120" viewBox="0 0 320 120" preserveAspectRatio="none" style="margin-top:12px;display:block;">
+          <defs>
+            <linearGradient id="wArea" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="rgba(61,139,253,0.28)"></stop>
+              <stop offset="100%" stop-color="rgba(61,139,253,0)"></stop>
+            </linearGradient>
+          </defs>
+          <line x1="0" y1="95.7" x2="320" y2="95.7" stroke="#FF9F0A" stroke-width="1.5" stroke-dasharray="5 5" opacity="0.8"></line>
+          <path d="M10,24.3 43,30 77,27.9 110,38.6 143,43.6 177,48.6 210,52.9 243,58.6 277,61.4 310,64.3 L310,120 L10,120 Z" fill="url(#wArea)"></path>
+          <polyline points="10,24.3 43,30 77,27.9 110,38.6 143,43.6 177,48.6 210,52.9 243,58.6 277,61.4 310,64.3" fill="none" stroke="#3D8BFD" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>
+          <circle cx="310" cy="64.3" r="4" fill="#3D8BFD" stroke="#171C24" stroke-width="2.5"></circle>
+        </svg>
+        <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;font-weight:500;color:#5B6472;">
+          <span>Apr</span><span>May</span><span>Jun</span><span>Jul</span>
+        </div>
+      </div>
+
+      <!-- 5. Totals row (no card) -->
+      <div style="display:flex;align-items:stretch;padding:4px 4px;">
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:30px;font-weight:800;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;line-height:1;">214</div>
+          <div style="font-size:12.5px;font-weight:600;color:#9AA3AF;margin-top:6px;">Workouts</div>
+        </div>
+        <div style="width:1px;background:rgba(255,255,255,0.08);margin:2px 0;"></div>
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:30px;font-weight:800;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;line-height:1;">9,860</div>
+          <div style="font-size:12.5px;font-weight:600;color:#9AA3AF;margin-top:6px;">Minutes</div>
+        </div>
+        <div style="width:1px;background:rgba(255,255,255,0.08);margin:2px 0;"></div>
+        <div style="flex:1;text-align:center;">
+          <div style="font-size:30px;font-weight:800;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;line-height:1;">41.3k</div>
+          <div style="font-size:12.5px;font-weight:600;color:#9AA3AF;margin-top:6px;">Reps</div>
+        </div>
+      </div>
+
+      <!-- 6. Muscle balance card -->
+      <div style="background:#171C24;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:16px;">
+        <div style="font-size:15px;font-weight:700;letter-spacing:-0.01em;margin-bottom:14px;">Muscle balance</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:44px;font-size:13px;font-weight:600;color:#9AA3AF;">Legs</div>
+            <div style="flex:1;height:10px;border-radius:999px;background:rgba(255,255,255,0.06);overflow:hidden;"><div style="width:100%;height:100%;border-radius:999px;background:#3D8BFD;"></div></div>
+            <div style="width:48px;text-align:right;font-size:12.5px;font-weight:600;color:#9AA3AF;font-variant-numeric:tabular-nums;">48 sets</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:44px;font-size:13px;font-weight:600;color:#9AA3AF;">Push</div>
+            <div style="flex:1;height:10px;border-radius:999px;background:rgba(255,255,255,0.06);overflow:hidden;"><div style="width:50%;height:100%;border-radius:999px;background:#3D8BFD;"></div></div>
+            <div style="width:48px;text-align:right;font-size:12.5px;font-weight:600;color:#9AA3AF;font-variant-numeric:tabular-nums;">24 sets</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:44px;font-size:13px;font-weight:600;color:#9AA3AF;">Pull</div>
+            <div style="flex:1;height:10px;border-radius:999px;background:rgba(255,255,255,0.06);overflow:hidden;"><div style="width:63%;height:100%;border-radius:999px;background:#3D8BFD;"></div></div>
+            <div style="width:48px;text-align:right;font-size:12.5px;font-weight:600;color:#9AA3AF;font-variant-numeric:tabular-nums;">30 sets</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:44px;font-size:13px;font-weight:600;color:#9AA3AF;">Core</div>
+            <div style="flex:1;height:10px;border-radius:999px;background:rgba(255,255,255,0.06);overflow:hidden;"><div style="width:40%;height:100%;border-radius:999px;background:#3D8BFD;"></div></div>
+            <div style="width:48px;text-align:right;font-size:12.5px;font-weight:600;color:#9AA3AF;font-variant-numeric:tabular-nums;">19 sets</div>
+          </div>
+        </div>
+        <div style="font-size:13px;font-weight:500;color:#9AA3AF;margin-top:14px;line-height:1.5;">Legs are getting <span style="color:#F2F4F7;font-weight:700;">2× your chest volume</span> — consider balancing.</div>
+      </div>
+
+      <!-- 7. Badges row -->
+      <div style="display:flex;align-items:center;gap:14px;background:#171C24;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:14px 16px;cursor:pointer;transition:background .15s ease;" style-active="background:rgba(255,255,255,0.04)">
+        <div style="display:flex;align-items:center;">
+          <div style="width:36px;height:36px;border-radius:999px;background:rgba(255,159,10,0.16);display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid #171C24;">🥇</div>
+          <div style="width:36px;height:36px;border-radius:999px;background:rgba(61,139,253,0.16);display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid #171C24;margin-left:-10px;">💪</div>
+          <div style="width:36px;height:36px;border-radius:999px;background:rgba(48,209,88,0.16);display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid #171C24;margin-left:-10px;">🔥</div>
+          <div style="width:36px;height:36px;border-radius:999px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#9AA3AF;border:2px solid #171C24;margin-left:-10px;">+11</div>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:16px;font-weight:600;letter-spacing:-0.01em;">Badges</div>
+          <div style="font-size:12.5px;font-weight:600;color:#9AA3AF;margin-top:2px;font-variant-numeric:tabular-nums;">14/18 earned</div>
+        </div>
+        <div style="color:#5B6472;">
+          <svg width="9" height="16" viewBox="0 0 9 16" fill="none"><path d="M1 1l6 7-6 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </div>
+      </div>
+
+      <!-- 8. History list -->
+      <div>
+        <div style="font-size:15px;font-weight:700;letter-spacing:-0.01em;padding:0 4px 10px;">Recent workouts</div>
+        <div style="background:#171C24;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
+          <sc-for list="{{ history }}" as="h" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-top:1px solid rgba(255,255,255,0.08);transition:background .12s ease;cursor:pointer;" style-active="background:rgba(255,255,255,0.04)">
+              <div style="width:34px;height:34px;border-radius:10px;background:rgba(48,209,88,0.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3 3 6.5-7.5" stroke="#30D158" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:16px;font-weight:600;letter-spacing:-0.01em;">{{ h.title }}</div>
+                <div style="font-size:12.5px;font-weight:500;color:#9AA3AF;margin-top:2px;font-variant-numeric:tabular-nums;">{{ h.date }} · {{ h.duration }}</div>
+              </div>
+              <div style="color:#5B6472;">
+                <svg width="9" height="16" viewBox="0 0 9 16" fill="none"><path d="M1 1l6 7-6 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Bottom tab bar -->
+  <div style="position:absolute;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:space-around;align-items:flex-start;padding:8px 8px calc(8px + env(safe-area-inset-bottom));background:rgba(18,22,29,0.82);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid rgba(255,255,255,0.08);">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:#5B6472;transition:transform .12s ease;" style-active="transform:scale(0.9)">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="3" stroke="currentColor" stroke-width="2"></rect><path d="M4 9h16M8 3v3M16 3v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+      <span style="font-size:10px;font-weight:600;">Today</span>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:#5B6472;transition:transform .12s ease;" style-active="transform:scale(0.9)">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+      <span style="font-size:10px;font-weight:600;">Plan</span>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:#3D8BFD;transition:transform .12s ease;" style-active="transform:scale(0.9)">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="4" y="12" width="4" height="8" rx="1.2" fill="currentColor"></rect><rect x="10" y="7" width="4" height="13" rx="1.2" fill="currentColor"></rect><rect x="16" y="3" width="4" height="17" rx="1.2" fill="currentColor"></rect></svg>
+      <span style="font-size:10px;font-weight:700;">Stats</span>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:#5B6472;transition:transform .12s ease;" style-active="transform:scale(0.9)">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="2"></circle><circle cx="16.5" cy="9.5" r="2.4" stroke="currentColor" stroke-width="2"></circle><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5M15 15c2.5 0 5 1.6 5 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+      <span style="font-size:10px;font-weight:600;">Friends</span>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:#5B6472;transition:transform .12s ease;" style-active="transform:scale(0.9)">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="2"></circle><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+      <span style="font-size:10px;font-weight:600;">Profile</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844}}">
+class Component extends DCLogic {
+  state = { range: '8W' };
+
+  datasets = {
+    '8W': { max: 5, chartH: 120, bars: [
+      { label: '5/12', v: 3 }, { label: '5/19', v: 4 }, { label: '5/26', v: 2 }, { label: '6/2', v: 5 },
+      { label: '6/9', v: 4 }, { label: '6/16', v: 3 }, { label: '6/23', v: 5 }, { label: '6/30', v: 4 }
+    ]},
+    '6M': { max: 20, chartH: 120, bars: [
+      { label: 'Jan', v: 12 }, { label: 'Feb', v: 15 }, { label: 'Mar', v: 11 },
+      { label: 'Apr', v: 17 }, { label: 'May', v: 14 }, { label: 'Jun', v: 18 }
+    ]},
+    'All': { max: 60, chartH: 120, bars: [
+      { label: "'22", v: 28 }, { label: "'23", v: 44 }, { label: "'24", v: 52 },
+      { label: "'25", v: 49 }, { label: "'26", v: 22 }
+    ]}
+  };
+
+  history = [
+    { title: 'Push Day A', date: 'Jul 8', duration: '52 min' },
+    { title: 'Leg Day', date: 'Jul 6', duration: '1h 04m' },
+    { title: 'Pull Day B', date: 'Jul 5', duration: '48 min' },
+    { title: 'Upper Body', date: 'Jul 3', duration: '55 min' },
+    { title: 'Full Body', date: 'Jul 1', duration: '1h 12m' }
+  ];
+
+  renderVals() {
+    const ds = this.datasets[this.state.range];
+    const bars = ds.bars.map(b => ({
+      label: b.label,
+      h: Math.max(6, Math.round((b.v / ds.max) * ds.chartH)) + 'px'
+    }));
+    const seg = ['8W', '6M', 'All'].map(k => {
+      const active = k === this.state.range;
+      return {
+        label: k,
+        onClick: () => this.setState({ range: k }),
+        style: 'flex:1;min-width:44px;text-align:center;padding:6px 12px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:-0.01em;transition:color .2s ease, background .2s ease, box-shadow .2s ease, transform .12s ease;cursor:pointer;color:' +
+          (active ? '#F2F4F7' : '#9AA3AF') + ';background:' +
+          (active ? 'rgba(255,255,255,0.14)' : 'transparent') + ';box-shadow:' +
+          (active ? '0 1px 2px rgba(0,0,0,0.35)' : 'none') + ';'
+      };
+    });
+    return { bars, seg, history: this.history };
+  }
+}
+</script>
+</body>
+</html>
