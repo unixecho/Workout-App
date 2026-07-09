@@ -5,12 +5,10 @@
 - [x] docs/FD.md — all screens drafted + approved (2026-07-08)
 - [x] docs/TD.md — full technical design (2026-07-09)
 - [x] Claude Design prompts + all 10 mockups generated, DNA-checked (2026-07-09)
-- [x] Supabase project live (ap-southeast-2) + schema/RLS/triggers applied
 - [x] Vercel project live (workout-app-jade-theta.vercel.app), auto-deploys main
 - [x] Next.js app scaffolded (Next 16, App Router, STYLE.md tokens)
 - [x] Onboarding ported — real auth (magic link + Google), handle check,
       rule-based plan generation (2026-07-09)
-- [x] Google OAuth provider configured and verified working
 - [x] Exercise library seeded (29 exercises, adaptations keyed to the 8
       limitation tags); plan generation fills session_exercises
 - [x] **All screens ported to real features** (2026-07-09): Today, Plan,
@@ -21,30 +19,26 @@
 - [x] Instant tab switching (loading.tsx skeletons) + parallelized query
       waterfalls on every screen (2026-07-09)
 - [x] **Migrated Supabase Sydney → Frankfurt (eu-central-1)** (2026-07-09) —
-      new project `pjzdqxbmpaplmrqecdqf`, all 7 migrations reapplied
-      (0007 adds explicit table grants — the fresh project didn't have
-      Supabase's usual default anon/authenticated grants, unlike Sydney).
-      vercel.json pins functions to `fra1`.
+      new project `pjzdqxbmpaplmrqecdqf`, all 7 migrations reapplied (0007
+      adds explicit table grants the fresh project didn't have by default).
+      Vercel env vars + Google OAuth + Supabase URL config all updated by
+      owner; verified end-to-end: production bundle confirmed serving
+      Frankfurt (zero trace of Sydney left), DB schema/grants/seed data
+      all live, real magic-link generated and traced through production's
+      redirect flow.
 
-## Next — Frankfurt cutover (owner, one-time)
+## Open
 
-- [ ] **Vercel** → Project Settings → Environment Variables → update all 4:
-      `NEXT_PUBLIC_SUPABASE_URL=https://pjzdqxbmpaplmrqecdqf.supabase.co`,
-      `NEXT_PUBLIC_SUPABASE_ANON_KEY` + `SUPABASE_SERVICE_ROLE_KEY` (new
-      project's Settings → API), `NEXT_PUBLIC_SITE_URL=https://workout-app-jade-theta.vercel.app`.
-      Redeploy after saving.
-- [ ] **Google Cloud Console** → the existing OAuth client → Authorized
-      redirect URIs → add `https://pjzdqxbmpaplmrqecdqf.supabase.co/auth/v1/callback`
-      (old Sydney callback URI can stay or be removed, no harm either way)
-- [ ] **New Supabase project** → Authentication → Sign In / Providers →
-      Google → re-enter the same Client ID/Secret from Google Cloud (the
-      provider config doesn't carry over between projects)
-- [ ] **New Supabase project** → Authentication → URL Configuration → Site
-      URL = `https://workout-app-jade-theta.vercel.app`, Redirect URLs =
-      that same URL + `/auth/callback`, plus `http://localhost:3000/auth/callback`
-      for local dev
-- [ ] Old Sydney project can be deleted once the above is confirmed working
-      (test accounts don't carry over — fresh start on Frankfurt)
+- [ ] ⚠️ **Redirect URLs on the new Supabase project only allow-list the
+      bare domain, not the exact `/auth/callback` path** — live-tested and
+      confirmed Supabase silently truncates the redirect target, which
+      would make login silently fail in production. Fix: Authentication →
+      URL Configuration → Redirect URLs → add
+      `https://workout-app-jade-theta.vercel.app/auth/callback` (or a
+      `.../**` wildcard). One click, not yet done.
+- [ ] Delete the old Sydney Supabase project once the above is confirmed
+      fixed and a real sign-in has been tested (test accounts don't carry
+      over — fresh start on Frankfurt)
 - [ ] Polish pass against the mockups: motion/:active states everywhere,
       per-exercise demo keyframes (only 9 generic patterns exist), richer
       week-strip/hero states

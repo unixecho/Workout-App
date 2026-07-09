@@ -5,7 +5,37 @@ should read this first, then CLAUDE.md, then docs/FD.md.
 
 ---
 
-## 2026-07-09 (latest) — Every v1 screen ported and live
+## 2026-07-09 (latest) — Frankfurt migration verified; editable settings shipped
+
+- Editable settings landed: Profile rows for body stats, goal, availability,
+  equipment, and limitations now open real edit sheets with server actions;
+  saving a training-affecting field offers "Regenerate remaining days?"
+  (FD §10). Verified live end-to-end.
+- Instant navigation: `loading.tsx` skeleton on every route segment (tab bar
+  lives outside the data boundary, so switching tabs never blocks), and
+  collapsed sequential query waterfalls into parallel `Promise.all` batches
+  on Today/Stats/Friends/Badges.
+- **Migrated Supabase Sydney → Frankfurt** (owner's Israel location made
+  Sydney's ~270ms one-way latency the dominant cost on every screen). New
+  project `pjzdqxbmpaplmrqecdqf`; all 7 migrations reapplied. Discovered
+  and fixed a real gap along the way: the fresh project didn't have
+  Supabase's usual default anon/authenticated table grants (RLS policies
+  alone aren't enough — Postgres also needs table-level grants), so added
+  an explicit `0007_grants.sql`. `vercel.json` pins functions to `fra1`.
+- Owner updated Vercel env vars, Google OAuth redirect URI, and Supabase
+  provider/URL config. Verified end-to-end: production JS bundle confirmed
+  serving Frankfurt (zero Sydney references left after a redeploy — env var
+  changes alone don't rebuild already-deployed code, had to trigger a fresh
+  build), and traced a real magic-link through production's redirect flow.
+- **Found one open bug during that trace**: the new project's Redirect URLs
+  allow-list only has the bare domain, not `/auth/callback` specifically —
+  Supabase silently truncates the redirect target rather than erroring,
+  which would make production login silently fail. Documented in TODO.md
+  as the one remaining step before Frankfurt is fully cut over.
+- Old Sydney project still exists (not deleted) until the above is fixed
+  and a real login is confirmed working on Frankfurt.
+
+## 2026-07-09 (earlier) — Every v1 screen ported and live
 
 - **All 9 remaining screens ported to real, working features** against live
   Supabase data (commit 69fba9e): Today, Plan, Session Editor, Workout
