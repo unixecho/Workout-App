@@ -16,11 +16,35 @@
 - [x] **All screens ported to real features** (2026-07-09): Today, Plan,
       Session Editor, Workout Player (logging/streaks/badges/celebration),
       Exercise Library, Stats, Badges, Profile, Friends
+- [x] Editable settings (body stats, goal, availability, equipment,
+      limitations) + regenerate-remaining-days prompt on save (2026-07-09)
+- [x] Instant tab switching (loading.tsx skeletons) + parallelized query
+      waterfalls on every screen (2026-07-09)
+- [x] **Migrated Supabase Sydney → Frankfurt (eu-central-1)** (2026-07-09) —
+      new project `pjzdqxbmpaplmrqecdqf`, all 7 migrations reapplied
+      (0007 adds explicit table grants — the fresh project didn't have
+      Supabase's usual default anon/authenticated grants, unlike Sydney).
+      vercel.json pins functions to `fra1`.
 
-## Next
+## Next — Frankfurt cutover (owner, one-time)
 
-- [ ] Set `NEXT_PUBLIC_SITE_URL=https://workout-app-jade-theta.vercel.app`
-      in Vercel env vars (owner) — keeps auth redirects off localhost
+- [ ] **Vercel** → Project Settings → Environment Variables → update all 4:
+      `NEXT_PUBLIC_SUPABASE_URL=https://pjzdqxbmpaplmrqecdqf.supabase.co`,
+      `NEXT_PUBLIC_SUPABASE_ANON_KEY` + `SUPABASE_SERVICE_ROLE_KEY` (new
+      project's Settings → API), `NEXT_PUBLIC_SITE_URL=https://workout-app-jade-theta.vercel.app`.
+      Redeploy after saving.
+- [ ] **Google Cloud Console** → the existing OAuth client → Authorized
+      redirect URIs → add `https://pjzdqxbmpaplmrqecdqf.supabase.co/auth/v1/callback`
+      (old Sydney callback URI can stay or be removed, no harm either way)
+- [ ] **New Supabase project** → Authentication → Sign In / Providers →
+      Google → re-enter the same Client ID/Secret from Google Cloud (the
+      provider config doesn't carry over between projects)
+- [ ] **New Supabase project** → Authentication → URL Configuration → Site
+      URL = `https://workout-app-jade-theta.vercel.app`, Redirect URLs =
+      that same URL + `/auth/callback`, plus `http://localhost:3000/auth/callback`
+      for local dev
+- [ ] Old Sydney project can be deleted once the above is confirmed working
+      (test accounts don't carry over — fresh start on Frankfurt)
 - [ ] Polish pass against the mockups: motion/:active states everywhere,
       per-exercise demo keyframes (only 9 generic patterns exist), richer
       week-strip/hero states
