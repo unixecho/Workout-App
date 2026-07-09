@@ -4,27 +4,51 @@ import { StatsScreen } from "@/components/stats/StatsScreen";
 export default async function StatsPage() {
   const { supabase, user, profile } = await requireProfile();
 
-  const { data: streak } = await supabase
-    .from("streaks")
-    .select("current_streak, longest_streak, freeze_count")
-    .eq("user_id", user.id)
-    .single();
-
-  const { data: logs } = await supabase
-    .from("workout_logs")
-    .select("id, plan_day_id, started_at, duration_seconds, total_reps, status")
-    .eq("user_id", user.id)
-    .eq("status", "complete")
-    .order("started_at", { ascending: false });
-  const completed = logs ?? [];
-
-  // This week
   const now = new Date();
   const weekStart = new Date(now);
   weekStart.setDate(now.getDate() - mondayIndex(now));
   weekStart.setHours(0, 0, 0, 0);
+
+  // One parallel round trip for everything independent (Sydney→user RTT is
+  // the cost driver, not query weight).
+  const [
+    { data: streak },
+    { data: logs },
+    plan,
+    { data: weighIns },
+    { data: exLogs },
+    { count: badgesEarned },
+    { count: badgesTotal },
+  ] = await Promise.all([
+    supabase
+      .from("streaks")
+      .select("current_streak, longest_streak, freeze_count")
+      .eq("user_id", user.id)
+      .single(),
+    supabase
+      .from("workout_logs")
+      .select("id, plan_day_id, started_at, duration_seconds, total_reps, status")
+      .eq("user_id", user.id)
+      .eq("status", "complete")
+      .order("started_at", { ascending: false }),
+    getActivePlan(supabase, user.id),
+    supabase.from("weigh_ins").select("weight_kg, logged_at").eq("user_id", user.id).order("logged_at"),
+    supabase
+      .from("exercise_logs")
+      .select("sets_completed, exercises(muscle_groups), workout_logs!inner(user_id, status)")
+      .eq("workout_logs.user_id", user.id)
+      .eq("workout_logs.status", "complete")
+      .eq("removed", false),
+    supabase
+      .from("user_badges")
+      .select("badge_id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .not("earned_at", "is", null),
+    supabase.from("badges").select("id", { count: "exact", head: true }),
+  ]);
+  const completed = logs ?? [];
+
   const thisWeekDone = completed.filter((l) => new Date(l.started_at) >= weekStart).length;
-  const plan = await getActivePlan(supabase, user.id);
   const thisWeekPlanned = plan?.days.filter((d) => !d.is_rest_day).length ?? 0;
 
   // 8-week consistency: bucket 7 = current week, bucket 0 = 7 weeks back
@@ -35,20 +59,6 @@ export default async function StatsPage() {
     if (w >= 0 && w < 8) weeks[w] += 1;
   }
 
-  // Weigh-ins
-  const { data: weighIns } = await supabase
-    .from("weigh_ins")
-    .select("weight_kg, logged_at")
-    .eq("user_id", user.id)
-    .order("logged_at");
-
-  // Muscle balance from exercise_logs joined via exercises
-  const { data: exLogs } = await supabase
-    .from("exercise_logs")
-    .select("sets_completed, exercises(muscle_groups), workout_logs!inner(user_id, status)")
-    .eq("workout_logs.user_id", user.id)
-    .eq("workout_logs.status", "complete")
-    .eq("removed", false);
   const balance: Record<string, number> = {};
   for (const l of exLogs ?? []) {
     const muscles = (l.exercises as unknown as { muscle_groups: string[] })?.muscle_groups ?? [];
@@ -58,15 +68,6 @@ export default async function StatsPage() {
       balance[m] = (balance[m] ?? 0) + sets;
     }
   }
-
-  const { count: badgesEarned } = await supabase
-    .from("user_badges")
-    .select("badge_id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .not("earned_at", "is", null);
-  const { count: badgesTotal } = await supabase
-    .from("badges")
-    .select("id", { count: "exact", head: true });
 
   // History with day titles
   const dayTitles = new Map((plan?.days ?? []).map((d) => [d.id, d.session_title ?? "Workout"]));

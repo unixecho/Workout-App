@@ -4,38 +4,29 @@ import { BadgesScreen, type BadgeTile } from "@/components/badges/BadgesScreen";
 export default async function BadgesPage() {
   const { supabase, user } = await requireProfile();
 
-  const { data: catalog } = await supabase
-    .from("badges")
-    .select("id, key, section, name, description, unlock_rule")
-    .order("section");
-  const { data: mine } = await supabase
-    .from("user_badges")
-    .select("badge_id, earned_at")
-    .eq("user_id", user.id);
+  const [{ data: catalog }, { data: mine }, { data: sums }, { data: streak }, { count: friends }, { count: bumps }] =
+    await Promise.all([
+      supabase.from("badges").select("id, key, section, name, description, unlock_rule").order("section"),
+      supabase.from("user_badges").select("badge_id, earned_at").eq("user_id", user.id),
+      supabase
+        .from("workout_logs")
+        .select("total_reps, duration_seconds")
+        .eq("user_id", user.id)
+        .eq("status", "complete"),
+      supabase.from("streaks").select("current_streak").eq("user_id", user.id).single(),
+      supabase
+        .from("friendships")
+        .select("user_a", { count: "exact", head: true })
+        .or(`user_a.eq.${user.id},user_b.eq.${user.id}`),
+      supabase
+        .from("fist_bumps")
+        .select("event_id", { count: "exact", head: true })
+        .eq("from_user_id", user.id),
+    ]);
   const earnedAt = new Map((mine ?? []).filter((b) => b.earned_at).map((b) => [b.badge_id, b.earned_at as string]));
-
-  // Aggregates for progress on unearned badges
-  const { count: sessions } = await supabase
-    .from("workout_logs")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("status", "complete");
-  const { data: sums } = await supabase
-    .from("workout_logs")
-    .select("total_reps, duration_seconds")
-    .eq("user_id", user.id)
-    .eq("status", "complete");
+  const sessions = (sums ?? []).length;
   const reps = (sums ?? []).reduce((a, r) => a + (r.total_reps ?? 0), 0);
   const minutes = Math.round((sums ?? []).reduce((a, r) => a + (r.duration_seconds ?? 0), 0) / 60);
-  const { data: streak } = await supabase.from("streaks").select("current_streak").eq("user_id", user.id).single();
-  const { count: friends } = await supabase
-    .from("friendships")
-    .select("user_a", { count: "exact", head: true })
-    .or(`user_a.eq.${user.id},user_b.eq.${user.id}`);
-  const { count: bumps } = await supabase
-    .from("fist_bumps")
-    .select("event_id", { count: "exact", head: true })
-    .eq("from_user_id", user.id);
 
   const progressFor = (rule: { type: string; threshold?: number | string }): { current: number; target: number } | null => {
     const t = Number(rule.threshold ?? 0);

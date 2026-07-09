@@ -4,7 +4,15 @@ import { FriendsScreen, type FeedItem, type FriendCard } from "@/components/frie
 export default async function FriendsPage() {
   const { supabase, user } = await requireProfile();
 
-  const { data: cards } = await supabase.rpc("friend_cards");
+  const [{ data: cards }, { data: feedRows }] = await Promise.all([
+    supabase.rpc("friend_cards"),
+    supabase
+      .from("feed_entries")
+      .select("event_id, created_at, activity_events(id, type, payload)")
+      .eq("recipient_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(20),
+  ]);
   const people: FriendCard[] = (cards ?? []).map(
     (c: { user_id: string; handle: string; display_name: string; current_streak: number; relation: string }) => ({
       userId: c.user_id,
@@ -14,13 +22,6 @@ export default async function FriendsPage() {
       relation: c.relation as FriendCard["relation"],
     }),
   );
-
-  const { data: feedRows } = await supabase
-    .from("feed_entries")
-    .select("event_id, created_at, activity_events(id, type, payload)")
-    .eq("recipient_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(20);
 
   const eventIds = (feedRows ?? []).map((f) => f.event_id);
   const { data: bumps } = eventIds.length

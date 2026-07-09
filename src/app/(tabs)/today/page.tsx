@@ -13,39 +13,48 @@ export default async function TodayPage() {
   weekStart.setDate(now.getDate() - todayIdx);
   weekStart.setHours(0, 0, 0, 0);
 
-  const { data: weekLogs } = await supabase
-    .from("workout_logs")
-    .select("id, plan_day_id, status, started_at, completed_at, duration_seconds")
-    .eq("user_id", user.id)
-    .gte("started_at", weekStart.toISOString());
+  // Everything independent runs in one round trip — latency is per-trip.
+  const [{ data: weekLogs }, { data: streak }, { count: totalSessions }, { data: feed }, { count: total }] =
+    await Promise.all([
+      supabase
+        .from("workout_logs")
+        .select("id, plan_day_id, status, started_at, completed_at, duration_seconds")
+        .eq("user_id", user.id)
+        .gte("started_at", weekStart.toISOString()),
+      supabase.from("streaks").select("current_streak").eq("user_id", user.id).single(),
+      supabase
+        .from("workout_logs")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("status", "complete"),
+      supabase
+        .from("feed_entries")
+        .select("event_id, created_at, activity_events(type, payload, created_at)")
+        .eq("recipient_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(3),
+      todayDay && !todayDay.is_rest_day
+        ? supabase
+            .from("session_exercises")
+            .select("id", { count: "exact", head: true })
+            .eq("plan_day_id", todayDay.id)
+            .eq("is_optional", false)
+        : Promise.resolve({ count: 0 }),
+    ]);
 
   const todayLog =
     weekLogs?.find((l) => l.plan_day_id === todayDay?.id && l.status !== "abandoned") ?? null;
 
+  const exercisesTotal = total ?? 0;
   let exercisesDone = 0;
-  let exercisesTotal = 0;
-  if (todayDay && !todayDay.is_rest_day) {
-    const { count: total } = await supabase
-      .from("session_exercises")
+  if (todayLog && exercisesTotal > 0) {
+    const { count: done } = await supabase
+      .from("exercise_logs")
       .select("id", { count: "exact", head: true })
-      .eq("plan_day_id", todayDay.id)
-      .eq("is_optional", false);
-    exercisesTotal = total ?? 0;
-    if (todayLog) {
-      const { count: done } = await supabase
-        .from("exercise_logs")
-        .select("id", { count: "exact", head: true })
-        .eq("workout_log_id", todayLog.id)
-        .eq("removed", false);
-      exercisesDone = done ?? 0;
-    }
+      .eq("workout_log_id", todayLog.id)
+      .eq("removed", false);
+    exercisesDone = done ?? 0;
   }
-
-  const { data: streak } = await supabase
-    .from("streaks")
-    .select("current_streak")
-    .eq("user_id", user.id)
-    .single();
 
   // Week strip states
   const weekTiles: WeekTileState[] = (plan?.days ?? []).map((d) => {
@@ -57,11 +66,6 @@ export default async function TodayPage() {
   });
 
   // Next badge teaser: closest unearned milestone by total completed sessions
-  const { count: totalSessions } = await supabase
-    .from("workout_logs")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("status", "complete");
   const milestones = [
     { at: 1, name: "First Rep" },
     { at: 10, name: "10 Workouts" },
@@ -69,14 +73,6 @@ export default async function TodayPage() {
     { at: 100, name: "100 Workouts" },
   ];
   const next = milestones.find((m) => (totalSessions ?? 0) < m.at) ?? null;
-
-  // Friends ticker: 3 latest feed entries
-  const { data: feed } = await supabase
-    .from("feed_entries")
-    .select("event_id, created_at, activity_events(type, payload, created_at)")
-    .eq("recipient_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(3);
 
   return (
     <TodayScreen

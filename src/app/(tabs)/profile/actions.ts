@@ -5,6 +5,59 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export async function updateBodyStats(age: number | null, heightCm: number | null, weightKg: number | null) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in");
+  await supabase
+    .from("profiles")
+    .update({ age, height_cm: heightCm, weight_kg: weightKg })
+    .eq("user_id", user.id);
+  revalidatePath("/profile");
+  revalidatePath("/stats");
+}
+
+/**
+ * Training-affecting settings (FD §10): goal, availability, equipment,
+ * limitations. The UI offers "Regenerate remaining days?" after saving —
+ * regeneration itself is the Plan tab's regenerateWeek action.
+ */
+export async function updateTraining(fields: {
+  goal?: string;
+  weekdayAvailability?: number[];
+  equipment?: string;
+  limitations?: string[];
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in");
+
+  const update: Record<string, unknown> = {};
+  if (fields.goal !== undefined) update.goal = fields.goal;
+  if (fields.equipment !== undefined) update.equipment = fields.equipment;
+  if (fields.limitations !== undefined) update.limitations = fields.limitations;
+  if (fields.weekdayAvailability !== undefined) {
+    update.weekday_availability = fields.weekdayAvailability;
+    update.days_per_week = fields.weekdayAvailability.length;
+  }
+  await supabase.from("profiles").update(update).eq("user_id", user.id);
+  revalidatePath("/profile");
+}
+
+export async function updateUnits(pref: "metric" | "imperial") {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in");
+  await supabase.from("profiles").update({ unit_pref: pref }).eq("user_id", user.id);
+  revalidatePath("/profile");
+}
+
 export async function updateNotificationPref(
   key: "friend_activity_enabled" | "badge_earned_enabled" | "workout_reminder_enabled" | "streak_risk_enabled",
   value: boolean,

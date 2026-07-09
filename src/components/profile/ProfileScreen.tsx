@@ -4,7 +4,25 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Sheet } from "@/components/Sheet";
-import { deleteAccount, updateNotificationPref, updateVisibility } from "@/app/(tabs)/profile/actions";
+import {
+  deleteAccount,
+  updateBodyStats,
+  updateNotificationPref,
+  updateTraining,
+  updateUnits,
+  updateVisibility,
+} from "@/app/(tabs)/profile/actions";
+import { regenerateWeek } from "@/app/(tabs)/plan/actions";
+
+const WEEKDAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+const LIMITATION_TAGS = ["Knee", "Shoulder", "Back", "Wrist", "Ankle", "Hip", "Elbow", "Neck"];
+const GOALS: [string, string][] = [
+  ["lose_weight", "Lose weight"],
+  ["build_muscle", "Build muscle"],
+  ["get_stronger", "Get stronger"],
+  ["endurance", "Endurance"],
+  ["stay_healthy", "Stay healthy"],
+];
 
 interface Props {
   displayName: string;
@@ -12,20 +30,42 @@ interface Props {
   email: string;
   joined: string;
   stats: { streak: number; badges: number; workouts: number };
-  body: { age: number | null; heightCm: number | null; weightKg: number | null; units: string; goal: string };
-  training: { daysPerWeek: number; equipment: string; limitations: string };
+  body: { age: number | null; heightCm: number | null; weightKg: number | null };
+  unitPref: "metric" | "imperial";
+  goal: string;
+  weekdayAvailability: number[];
+  equipment: string;
+  limitations: string[];
   notif: { reminder: boolean; friendActivity: boolean; badgeEarned: boolean };
   visibility: "friends" | "private";
 }
+
+type EditSheet = null | "body" | "goal" | "availability" | "equipment" | "limitations";
 
 export function ProfileScreen(p: Props) {
   const router = useRouter();
   const [notif, setNotif] = useState(p.notif);
   const [vis, setVis] = useState(p.visibility);
+  const [units, setUnits] = useState(p.unitPref);
+  const [sheet, setSheet] = useState<EditSheet>(null);
+  const [regenPrompt, setRegenPrompt] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  // Edit drafts (initialized when a sheet opens)
+  const [age, setAge] = useState(p.body.age ? String(p.body.age) : "");
+  const [height, setHeight] = useState(p.body.heightCm ? String(p.body.heightCm) : "");
+  const [weight, setWeight] = useState(p.body.weightKg ? String(p.body.weightKg) : "");
+  const [goal, setGoal] = useState(p.goal);
+  const [days, setDays] = useState<boolean[]>(() => {
+    const w = [false, false, false, false, false, false, false];
+    p.weekdayAvailability.forEach((i) => (w[i] = true));
+    return w;
+  });
+  const [equip, setEquip] = useState(p.equipment);
+  const [limits, setLimits] = useState<string[]>(p.limitations);
 
   const initials = p.displayName
     .split(" ")
@@ -39,6 +79,14 @@ export function ProfileScreen(p: Props) {
     router.push("/onboarding");
     router.refresh();
   };
+
+  /** Save a training-affecting change, then offer regeneration (FD §10). */
+  const saveTraining = (fields: Parameters<typeof updateTraining>[0]) =>
+    startTransition(async () => {
+      await updateTraining(fields);
+      setSheet(null);
+      setRegenPrompt(true);
+    });
 
   return (
     <main style={{ minHeight: "100%", paddingBottom: 24 }}>
@@ -76,57 +124,50 @@ export function ProfileScreen(p: Props) {
         </Group>
 
         <Group label="Body & Goal">
-          <Row label="Body stats" value={`${p.body.age ?? "—"} yrs · ${p.body.heightCm ?? "—"} cm · ${p.body.weightKg ?? "—"} kg`} />
-          <Row label="Units" value={p.body.units} />
-          <Row label="Goal" value={p.body.goal} />
+          <Row
+            label="Body stats"
+            value={`${p.body.age ?? "—"} yrs · ${p.body.heightCm ?? "—"} cm · ${p.body.weightKg ?? "—"} kg`}
+            onClick={() => {
+              setAge(p.body.age ? String(p.body.age) : "");
+              setHeight(p.body.heightCm ? String(p.body.heightCm) : "");
+              setWeight(p.body.weightKg ? String(p.body.weightKg) : "");
+              setSheet("body");
+            }}
+          />
+          <Row
+            label="Units"
+            value={units === "metric" ? "kg · cm" : "lb · ft-in"}
+            onClick={() => {
+              const next = units === "metric" ? "imperial" : "metric";
+              setUnits(next);
+              startTransition(() => updateUnits(next));
+            }}
+          />
+          <Row label="Goal" value={GOALS.find(([k]) => k === goal)?.[1] ?? "—"} onClick={() => setSheet("goal")} />
         </Group>
 
         <Group label="Training">
-          <Row label="Availability" value={`${p.training.daysPerWeek} days/week`} />
-          <Row label="Equipment" value={p.training.equipment} />
-          <Row label="Limitations" value={p.training.limitations} />
+          <Row label="Availability" value={`${days.filter(Boolean).length} days/week`} onClick={() => setSheet("availability")} />
+          <Row label="Equipment" value={equip === "full_gym" ? "Full gym" : equip === "basic" ? "Basic" : "None"} onClick={() => setSheet("equipment")} />
+          <Row label="Limitations" value={limits.join(", ") || "None"} onClick={() => setSheet("limitations")} />
         </Group>
 
         <Group label="Notifications">
-          <ToggleRow
-            label="Workout reminder"
-            on={notif.reminder}
-            onToggle={(v) => {
-              setNotif({ ...notif, reminder: v });
-              startTransition(() => updateNotificationPref("workout_reminder_enabled", v));
-            }}
-          />
-          <ToggleRow
-            label="Friend activity"
-            on={notif.friendActivity}
-            onToggle={(v) => {
-              setNotif({ ...notif, friendActivity: v });
-              startTransition(() => updateNotificationPref("friend_activity_enabled", v));
-            }}
-          />
-          <ToggleRow
-            label="Badge earned"
-            on={notif.badgeEarned}
-            onToggle={(v) => {
-              setNotif({ ...notif, badgeEarned: v });
-              startTransition(() => updateNotificationPref("badge_earned_enabled", v));
-            }}
-          />
+          <ToggleRow label="Workout reminder" on={notif.reminder} onToggle={(v) => { setNotif({ ...notif, reminder: v }); startTransition(() => updateNotificationPref("workout_reminder_enabled", v)); }} />
+          <ToggleRow label="Friend activity" on={notif.friendActivity} onToggle={(v) => { setNotif({ ...notif, friendActivity: v }); startTransition(() => updateNotificationPref("friend_activity_enabled", v)); }} />
+          <ToggleRow label="Badge earned" on={notif.badgeEarned} onToggle={(v) => { setNotif({ ...notif, badgeEarned: v }); startTransition(() => updateNotificationPref("badge_earned_enabled", v)); }} />
         </Group>
 
         <Group label="Privacy">
-          <button
+          <Row
+            label="Activity visibility"
+            value={vis === "friends" ? "Friends" : "Private"}
             onClick={() => {
               const next = vis === "friends" ? "private" : "friends";
               setVis(next);
               startTransition(() => updateVisibility(next));
             }}
-            style={{ display: "flex", alignItems: "center", width: "100%", textAlign: "left", padding: "14px 16px", gap: 12 }}
-          >
-            <span style={{ flex: 1, fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em" }}>Activity visibility</span>
-            <span style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-dim)", textTransform: "capitalize" }}>{vis}</span>
-            <Chevron />
-          </button>
+          />
         </Group>
 
         <Group label="About">
@@ -143,6 +184,172 @@ export function ProfileScreen(p: Props) {
         </div>
       </div>
 
+      {/* ===== Body stats sheet ===== */}
+      <Sheet open={sheet === "body"} onClose={() => setSheet(null)} title="Body stats">
+        <FieldRow label="Age" suffix="yrs" value={age} onChange={(v) => setAge(v.replace(/[^\d]/g, ""))} />
+        <FieldRow label="Height" suffix="cm" value={height} onChange={(v) => setHeight(v.replace(/[^\d.]/g, ""))} />
+        <FieldRow label="Weight" suffix="kg" value={weight} onChange={(v) => setWeight(v.replace(/[^\d.]/g, ""))} />
+        <SaveButton
+          pending={pending}
+          onClick={() =>
+            startTransition(async () => {
+              await updateBodyStats(age ? parseInt(age, 10) : null, height ? parseFloat(height) : null, weight ? parseFloat(weight) : null);
+              setSheet(null);
+            })
+          }
+        />
+      </Sheet>
+
+      {/* ===== Goal sheet ===== */}
+      <Sheet open={sheet === "goal"} onClose={() => setSheet(null)} title="Goal">
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {GOALS.map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setGoal(key)}
+              style={{
+                width: "100%",
+                textAlign: "left",
+                padding: "14px 16px",
+                borderRadius: 12,
+                fontSize: 16,
+                fontWeight: 600,
+                background: goal === key ? "rgba(61,139,253,0.14)" : "var(--fill-resting)",
+                color: goal === key ? "var(--blue)" : "var(--ink)",
+                border: `1px solid ${goal === key ? "rgba(61,139,253,0.45)" : "var(--card-border)"}`,
+                transition: "background .2s ease, color .2s ease",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <SaveButton pending={pending} onClick={() => saveTraining({ goal })} />
+      </Sheet>
+
+      {/* ===== Availability sheet ===== */}
+      <Sheet open={sheet === "availability"} onClose={() => setSheet(null)} title="Training days">
+        <div style={{ display: "flex", gap: 8, justifyContent: "space-between", padding: "4px 0 8px" }}>
+          {WEEKDAY_LABELS.map((label, i) => (
+            <button
+              key={i}
+              onClick={() => {
+                const w = [...days];
+                w[i] = !w[i];
+                setDays(w);
+              }}
+              style={{
+                flex: 1,
+                aspectRatio: "1",
+                maxWidth: 44,
+                borderRadius: 999,
+                border: `1px solid ${days[i] ? "rgba(61,139,253,0.45)" : "var(--card-border)"}`,
+                background: days[i] ? "rgba(61,139,253,0.18)" : "rgba(255,255,255,0.04)",
+                color: days[i] ? "var(--blue)" : "var(--ink-faint)",
+                fontSize: 13,
+                fontWeight: 700,
+                transition: "background .2s ease, color .2s ease",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-dim)", textAlign: "center", marginBottom: 6, fontVariantNumeric: "tabular-nums" }}>
+          {days.filter(Boolean).length} days/week
+        </div>
+        <SaveButton
+          pending={pending}
+          disabled={days.filter(Boolean).length === 0}
+          onClick={() => saveTraining({ weekdayAvailability: days.map((on, i) => (on ? i : -1)).filter((i) => i >= 0) })}
+        />
+      </Sheet>
+
+      {/* ===== Equipment sheet ===== */}
+      <Sheet open={sheet === "equipment"} onClose={() => setSheet(null)} title="Equipment">
+        <div style={{ display: "flex", background: "var(--fill-resting)", borderRadius: 10, padding: 2, marginBottom: 6 }}>
+          {(
+            [
+              ["none", "None"],
+              ["basic", "Basic"],
+              ["full_gym", "Full gym"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setEquip(key)}
+              style={{
+                flex: 1,
+                padding: "10px 0",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 700,
+                background: equip === key ? "rgba(61,139,253,0.18)" : "transparent",
+                color: equip === key ? "var(--blue)" : "var(--ink-dim)",
+                transition: "background .2s ease, color .2s ease",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <SaveButton pending={pending} onClick={() => saveTraining({ equipment: equip })} />
+      </Sheet>
+
+      {/* ===== Limitations sheet ===== */}
+      <Sheet open={sheet === "limitations"} onClose={() => setSheet(null)} title="Limitations">
+        <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink-faint)", marginBottom: 12 }}>
+          Areas to protect — drives which exercises get adapted or skipped.
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
+          {LIMITATION_TAGS.map((tag) => {
+            const on = limits.includes(tag);
+            return (
+              <button
+                key={tag}
+                onClick={() => setLimits(on ? limits.filter((t) => t !== tag) : [...limits, tag])}
+                style={{
+                  border: `1px solid ${on ? "rgba(61,139,253,0.45)" : "var(--card-border)"}`,
+                  borderRadius: 999,
+                  padding: "7px 14px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  background: on ? "rgba(61,139,253,0.18)" : "var(--fill-resting)",
+                  color: on ? "var(--blue)" : "var(--ink-dim)",
+                  transition: "background .15s ease, border-color .15s ease",
+                }}
+              >
+                {tag}
+              </button>
+            );
+          })}
+        </div>
+        <SaveButton pending={pending} onClick={() => saveTraining({ limitations: limits })} />
+      </Sheet>
+
+      {/* ===== Regenerate prompt after training changes (FD §10) ===== */}
+      <Sheet open={regenPrompt} onClose={() => setRegenPrompt(false)} title="Settings saved">
+        <div style={{ fontSize: 14, lineHeight: 1.5, color: "var(--ink-dim)", marginBottom: 14 }}>
+          Your training settings changed. Regenerate the remaining days of this week? Completed days are kept.
+        </div>
+        <button
+          disabled={pending}
+          onClick={() =>
+            startTransition(async () => {
+              await regenerateWeek();
+              setRegenPrompt(false);
+            })
+          }
+          style={{ width: "100%", padding: 14, borderRadius: 12, background: "rgba(61,139,253,0.14)", color: "var(--blue)", fontSize: 15, fontWeight: 700 }}
+        >
+          {pending ? "Regenerating…" : "Regenerate remaining days"}
+        </button>
+        <button onClick={() => setRegenPrompt(false)} style={{ width: "100%", padding: 14, borderRadius: 12, background: "var(--fill-resting)", color: "var(--ink)", fontSize: 15, fontWeight: 700, marginTop: 8 }}>
+          Keep as is
+        </button>
+      </Sheet>
+
+      {/* ===== Delete account ===== */}
       <Sheet open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete account?">
         <div style={{ fontSize: 14, lineHeight: 1.5, color: "var(--ink-dim)", marginBottom: 14 }}>
           This permanently deletes your profile, plan, history, badges and friendships. It cannot be undone. Type{" "}
@@ -193,12 +400,21 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", padding: "14px 16px", gap: 12, borderTop: "1px solid var(--hairline)", marginTop: -1 }}>
+function Row({ label, value, onClick }: { label: string; value: string; onClick?: () => void }) {
+  const inner = (
+    <>
       <span style={{ flex: 1, fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em" }}>{label}</span>
       <span style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-dim)", textAlign: "right", maxWidth: "55%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</span>
-    </div>
+      {onClick && <span style={{ color: "var(--ink-faint)", fontSize: 18 }}>›</span>}
+    </>
+  );
+  const style: React.CSSProperties = { display: "flex", alignItems: "center", width: "100%", textAlign: "left", padding: "14px 16px", gap: 12, borderTop: "1px solid var(--hairline)", marginTop: -1 };
+  return onClick ? (
+    <button onClick={onClick} style={style}>
+      {inner}
+    </button>
+  ) : (
+    <div style={style}>{inner}</div>
   );
 }
 
@@ -218,6 +434,29 @@ function ToggleRow({ label, on, onToggle }: { label: string; on: boolean; onTogg
   );
 }
 
-function Chevron() {
-  return <span style={{ color: "var(--ink-faint)", fontSize: 18 }}>›</span>;
+function FieldRow({ label, suffix, value, onChange }: { label: string; suffix: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--fill-resting)", borderRadius: 12, padding: "12px 16px", marginBottom: 10 }}>
+      <span style={{ flex: 1, fontSize: 15, fontWeight: 600 }}>{label}</span>
+      <input
+        inputMode="decimal"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{ width: 90, background: "transparent", border: "none", outline: "none", textAlign: "right", color: "var(--ink)", fontSize: 17, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}
+      />
+      <span style={{ width: 28, fontSize: 13, fontWeight: 600, color: "var(--ink-faint)" }}>{suffix}</span>
+    </div>
+  );
+}
+
+function SaveButton({ pending, disabled, onClick }: { pending: boolean; disabled?: boolean; onClick: () => void }) {
+  return (
+    <button
+      disabled={pending || disabled}
+      onClick={onClick}
+      style={{ width: "100%", padding: 15, borderRadius: 12, background: "var(--blue)", color: "#fff", fontSize: 15, fontWeight: 700, marginTop: 8, opacity: pending || disabled ? 0.6 : 1 }}
+    >
+      {pending ? "Saving…" : "Save"}
+    </button>
+  );
 }
