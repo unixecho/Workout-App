@@ -49,7 +49,7 @@ export function LibraryDetail({ exercise: e, pickDayId }: Props) {
             ))}
           </div>
           <span style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-faint)" }}>
-            {e.equipment === "full_gym" ? "Gym" : e.equipment === "basic" ? "Basic kit" : "Bodyweight"}
+            {e.equipment === "full_gym" ? "Gym" : e.equipment === "basic" ? "Basic kit" : e.equipment === "park" ? "Park" : "Bodyweight"}
           </span>
         </div>
 

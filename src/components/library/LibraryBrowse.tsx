@@ -32,12 +32,17 @@ export function LibraryBrowse({ items, pickDayId, userEquipment }: { items: Libr
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
 
-  const tier: Record<string, number> = { none: 0, basic: 1, full_gym: 2 };
+  const allowed: Record<string, string[]> = {
+    none: ["none"],
+    park: ["none", "park"],
+    basic: ["none", "basic"],
+    full_gym: ["none", "park", "basic", "full_gym"],
+  };
   const filtered = useMemo(
     () =>
       items.filter((e) => {
         if (query && !e.name.toLowerCase().includes(query.toLowerCase())) return false;
-        if (filter === "Safe for me") return !e.unsafe && tier[e.equipment] <= tier[userEquipment];
+        if (filter === "Safe for me") return !e.unsafe && (allowed[userEquipment] ?? ["none"]).includes(e.equipment);
         if (FILTER_MUSCLES[filter]) return e.muscles.some((m) => FILTER_MUSCLES[filter].includes(m));
         return true;
       }),
@@ -155,7 +160,7 @@ export function LibraryBrowse({ items, pickDayId, userEquipment }: { items: Libr
                 </div>
                 <span style={{ width: 1, height: 12, background: "var(--hairline)" }} />
                 <span style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-faint)", textTransform: "capitalize" }}>
-                  {e.equipment === "full_gym" ? "Gym" : e.equipment === "basic" ? "Basic kit" : "Bodyweight"}
+                  {e.equipment === "full_gym" ? "Gym" : e.equipment === "basic" ? "Basic kit" : e.equipment === "park" ? "Park" : "Bodyweight"}
                 </span>
               </div>
             </div>

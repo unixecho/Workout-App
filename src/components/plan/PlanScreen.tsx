@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
 import type { PlanDay } from "@/lib/data";
 import { convertToRestDay, regenerateWeek } from "@/app/(tabs)/plan/actions";
 import { Sheet } from "@/components/Sheet";
@@ -13,11 +14,13 @@ interface Props {
   days: PlanDay[];
   todayIdx: number;
   completedDayIds: string[];
+  completedDates: string[]; // completed_at ISO timestamps
 }
 
-export function PlanScreen({ planName, days, todayIdx, completedDayIds }: Props) {
+export function PlanScreen({ planName, days, todayIdx, completedDayIds, completedDates }: Props) {
   const [menuDay, setMenuDay] = useState<PlanDay | null>(null);
   const [confirmRegen, setConfirmRegen] = useState(false);
+  const [view, setView] = useState<"week" | "month">("week");
   const [pending, startTransition] = useTransition();
 
   return (
@@ -38,7 +41,9 @@ export function PlanScreen({ planName, days, todayIdx, completedDayIds }: Props)
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.02em", color: "var(--blue)" }}>This week</div>
+          <div style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.02em", color: "var(--blue)" }}>
+            {view === "week" ? "This week" : "This month"}
+          </div>
           <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.08, marginTop: 3 }}>{planName}</div>
         </div>
         <Link
@@ -52,7 +57,32 @@ export function PlanScreen({ planName, days, todayIdx, completedDayIds }: Props)
         </Link>
       </div>
 
-      <div style={{ padding: "4px 18px 0", display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ padding: "0 18px 10px" }}>
+        <div style={{ display: "flex", background: "var(--fill-resting)", borderRadius: 10, padding: 2 }}>
+          {(["week", "month"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              style={{
+                flex: 1,
+                padding: "8px 0",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 700,
+                background: view === v ? "rgba(61,139,253,0.18)" : "transparent",
+                color: view === v ? "var(--blue)" : "var(--ink-dim)",
+                transition: "background .2s ease, color .2s ease",
+              }}
+            >
+              {v === "week" ? "Week" : "Month"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {view === "month" && <MonthView days={days} completedDates={completedDates} />}
+
+      <div style={{ padding: "4px 18px 0", display: view === "week" ? "flex" : "none", flexDirection: "column", gap: 10 }}>
         {days.map((d) => {
           const isToday = d.day_of_week === todayIdx;
           const isDone = completedDayIds.includes(d.id);
@@ -187,6 +217,161 @@ export function PlanScreen({ planName, days, todayIdx, completedDayIds }: Props)
       </Sheet>
     </main>
   );
+}
+
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/** Monday-based weekday index (0=Mon..6=Sun). Kept local: lib/data is server-only. */
+function mondayIdx(d: Date): number {
+  return (d.getDay() + 6) % 7;
+}
+function ymd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Month view: projects the weekly template onto a calendar month — every
+ * date shows that weekday's planned session, past dates show what was
+ * actually completed (green). Tap a non-rest day to open its session.
+ */
+function MonthView({ days, completedDates }: { days: PlanDay[]; completedDates: string[] }) {
+  const router = useRouter();
+  const [offset, setOffset] = useState(0);
+
+  const { year, month, cells } = useMemo(() => {
+    const base = new Date();
+    base.setDate(1);
+    base.setMonth(base.getMonth() + offset);
+    const year = base.getFullYear();
+    const month = base.getMonth();
+    const lead = mondayIdx(new Date(year, month, 1));
+    const count = new Date(year, month + 1, 0).getDate();
+    const cells: (Date | null)[] = [
+      ...Array.from({ length: lead }, () => null),
+      ...Array.from({ length: count }, (_, i) => new Date(year, month, i + 1)),
+    ];
+    while (cells.length % 7 !== 0) cells.push(null);
+    return { year, month, cells };
+  }, [offset]);
+
+  const byWeekday = useMemo(() => new Map(days.map((d) => [d.day_of_week, d])), [days]);
+  const doneSet = useMemo(() => new Set(completedDates.map((iso) => ymd(new Date(iso)))), [completedDates]);
+  const todayStr = ymd(new Date());
+
+  return (
+    <div style={{ padding: "0 18px" }}>
+      <div style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 16, padding: "14px 12px 10px" }}>
+        {/* Month switcher */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 6px 10px" }}>
+          <button aria-label="Previous month" onClick={() => setOffset((o) => o - 1)} style={monthNavBtn()}>
+            ‹
+          </button>
+          <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.01em" }}>
+            {MONTH_NAMES[month]} {year}
+          </div>
+          <button aria-label="Next month" onClick={() => setOffset((o) => o + 1)} style={monthNavBtn()}>
+            ›
+          </button>
+        </div>
+
+        {/* Weekday header */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: 4 }}>
+          {["M", "T", "W", "T", "F", "S", "S"].map((l, i) => (
+            <div key={i} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: "var(--ink-faint)", padding: "4px 0" }}>
+              {l}
+            </div>
+          ))}
+        </div>
+
+        {/* Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", rowGap: 2 }}>
+          {cells.map((date, i) => {
+            if (!date) return <div key={i} />;
+            const day = byWeekday.get(mondayIdx(date));
+            const planned = !!day && !day.is_rest_day;
+            const dateStr = ymd(date);
+            const isDone = doneSet.has(dateStr);
+            const isToday = dateStr === todayStr;
+            return (
+              <button
+                key={i}
+                onClick={() => planned && day && router.push(`/sessions/${day.id}`)}
+                aria-label={planned ? `${dateStr}: ${day?.session_title}` : `${dateStr}: rest day`}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 3,
+                  padding: "5px 0 6px",
+                  borderRadius: 10,
+                  background: "transparent",
+                  cursor: planned ? "pointer" : "default",
+                  transition: "background .15s ease, transform .15s ease",
+                }}
+              >
+                <div
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 999,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 13.5,
+                    fontWeight: isToday ? 800 : 600,
+                    fontVariantNumeric: "tabular-nums",
+                    background: isDone ? "rgba(48,209,88,0.18)" : isToday ? "rgba(61,139,253,0.18)" : "transparent",
+                    color: isDone ? "var(--green)" : isToday ? "var(--blue)" : planned ? "var(--ink)" : "var(--ink-faint)",
+                    border: isToday ? "1px solid rgba(61,139,253,0.45)" : "1px solid transparent",
+                  }}
+                >
+                  {date.getDate()}
+                </div>
+                <span
+                  style={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: 999,
+                    background: isDone ? "var(--green)" : planned ? "var(--blue)" : "transparent",
+                    opacity: planned && !isDone && dateStr < todayStr ? 0.35 : 1,
+                  }}
+                />
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Legend */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 16, padding: "10px 0 4px" }}>
+          <LegendDot color="var(--blue)" label="Planned" />
+          <LegendDot color="var(--green)" label="Completed" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "var(--ink-dim)" }}>
+      <span style={{ width: 6, height: 6, borderRadius: 999, background: color }} />
+      {label}
+    </span>
+  );
+}
+
+function monthNavBtn(): React.CSSProperties {
+  return {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    background: "var(--fill-resting)",
+    color: "var(--ink)",
+    fontSize: 18,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
 }
 
 function sheetRow(): React.CSSProperties {

@@ -14,7 +14,7 @@ export type Goal =
   | "endurance"
   | "stay_healthy";
 
-export type Equipment = "none" | "basic" | "full_gym";
+export type Equipment = "none" | "park" | "basic" | "full_gym";
 
 export interface DayTemplate {
   title: string;

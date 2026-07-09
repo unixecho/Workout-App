@@ -27,21 +27,52 @@
       all live, real magic-link generated and traced through production's
       redirect flow.
 
+## Done (2026-07-09, Cowork session)
+
+- [x] Workout Player: finishing the last set now turns its dot green and
+      auto-completes the exercise (rep tracker + timer)
+- [x] Workout Player: checkpoints — set/rep progress and done state persist
+      through refresh (localStorage per day + server logs read across all
+      open logs; exercise logging made idempotent)
+- [x] Onboarding: magic-link errors in the URL hash (otp_expired etc.) now
+      surface a friendly message + reopen the email field to resend
+- [x] Plan tab: Week/Month toggle — month calendar projects the weekly
+      template, shows completed (green) / planned (blue) days, taps open
+      the session editor
+- [x] Exercise library expansion written as migrations 0008+0009 (NOT YET
+      APPLIED): `park` equipment tier (calisthenics parks), 21 new
+      exercises (cardio warmups incl. treadmill/bike/jump rope/high knees,
+      bodyweight mains, park: pull-up/dips/inverted row/step-up etc.),
+      Compound tags for full-body days
+- [x] Warm-up block: sessions now start with 3 min easy cardio (best
+      equipment option) + 1 mobility drill
+- [x] Per-exercise demo precision: 25 new hand-authored stick-figure
+      patterns; every exercise maps to a specific motion (0009 updates)
+- [x] Branded workout loader (barbell draw-in + squatting figure + RepUp)
+      and finish sequence (summary tiles → fade out to Plan)
+
 ## Open
 
+- [ ] ⚠️ **Apply migrations 0008 + 0009 to the Frankfurt project** (SQL
+      editor or `supabase db push`) — the park tier, new exercises, and
+      precise animation patterns don't exist in prod until then. 0008 must
+      run before/separately from 0009 (enum value + its first use can't
+      share a transaction).
 - [ ] ⚠️ **Redirect URLs on the new Supabase project only allow-list the
       bare domain, not the exact `/auth/callback` path** — live-tested and
       confirmed Supabase silently truncates the redirect target, which
       would make login silently fail in production. Fix: Authentication →
       URL Configuration → Redirect URLs → add
       `https://workout-app-jade-theta.vercel.app/auth/callback` (or a
-      `.../**` wildcard). One click, not yet done.
+      `.../**` wildcard). One click, not yet done. **This is almost
+      certainly the cause of the owner's expired-magic-link error
+      (otp_expired on /onboarding).**
 - [ ] Delete the old Sydney Supabase project once the above is confirmed
       fixed and a real sign-in has been tested (test accounts don't carry
       over — fresh start on Frankfurt)
 - [ ] Polish pass against the mockups: motion/:active states everywhere,
-      per-exercise demo keyframes (only 9 generic patterns exist), richer
-      week-strip/hero states
+      richer week-strip/hero states (per-exercise demo keyframes: done
+      2026-07-09)
 - [ ] Badge engine: implement remaining rule types (full_week, comeback,
       goal_reached, perfect_form, friend/social) + streak freeze auto-apply
       (earn 1 per 7 sessions, bank 2)

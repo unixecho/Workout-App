@@ -238,6 +238,27 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
     if (!isNaN(n)) setWeightKg(metric ? n : n / 2.2046);
   }
 
+  // Surface auth errors Supabase returns in the URL hash (e.g. an expired or
+  // already-used magic link: #error=access_denied&error_code=otp_expired).
+  // Without this the user lands on onboarding with no explanation.
+  useEffect(() => {
+    if (!window.location.hash) return;
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const code = params.get("error_code");
+    const err = params.get("error");
+    if (!code && !err) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- URL hash only exists client-side, must be read post-mount
+    setAuthError(
+      code === "otp_expired"
+        ? "That sign-in link has expired or was already used. Enter your email and we\u2019ll send a fresh one."
+        : (params.get("error_description") ?? "Sign-in failed. Please try again."),
+    );
+    setEmailOpen(true);
+    setMagicLinkSent(false);
+    // Clean the hash so a refresh doesn\u2019t re-show a stale error
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }, []);
+
   async function handleGoogleSignIn() {
     setAuthError(null);
     setAuthBusy(true);
@@ -865,6 +886,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
           <SegmentedControl
             options={[
               { key: "none", label: "None" },
+              { key: "park", label: "Park" },
               { key: "basic", label: "Basic" },
               { key: "full_gym", label: "Full gym" },
             ]}

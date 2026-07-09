@@ -25,15 +25,32 @@ export interface SessionExerciseInsert {
   rest_seconds: number;
 }
 
-const EQUIPMENT_TIER: Record<Equipment, number> = { none: 0, basic: 1, full_gym: 2 };
+// Which exercise-equipment tags each user setting can use. Not a linear
+// tier: home "basic" kit (dumbbells/bands) and a calisthenics park (bars)
+// are different capabilities, neither a superset of the other.
+const EQUIPMENT_ALLOWED: Record<Equipment, ReadonlySet<Equipment>> = {
+  none: new Set(["none"]),
+  park: new Set(["none", "park"]),
+  basic: new Set(["none", "basic"]),
+  full_gym: new Set(["none", "park", "basic", "full_gym"]),
+};
+
+/** True when a user with `userEquip` can perform an exercise tagged `exEquip`. */
+export function equipmentAllows(userEquip: Equipment, exEquip: Equipment): boolean {
+  return (EQUIPMENT_ALLOWED[userEquip] ?? EQUIPMENT_ALLOWED.none).has(exEquip);
+}
 
 // Exercises tracked by time rather than reps (dose_type = 'time').
 const TIMED_SLUGS = new Set([
   "plank", "bird-dog", "superman-hold", "dead-bug",
   "jumping-jacks", "mountain-climbers", "treadmill-intervals", "light-march",
   "arm-circles", "cat-cow", "hip-circles", "childs-pose",
+  "treadmill-walk", "bike-easy", "jump-rope", "high-knees",
+  "wall-sit", "side-plank",
 ]);
 
+// Cardio warm-up first (raises heart rate), best-equipped option wins.
+const CARDIO_WARMUP_SLUGS = ["treadmill-walk", "bike-easy", "jump-rope", "high-knees", "jumping-jacks", "light-march"];
 const WARMUP_SLUGS = ["light-march", "arm-circles", "cat-cow", "hip-circles"];
 const COOLDOWN_SLUGS = ["childs-pose", "cat-cow", "hip-circles"];
 
@@ -71,10 +88,10 @@ function doseFor(ex: ExerciseRow, goal: Goal): Pick<SessionExerciseInsert, "dose
 
 /**
  * Deterministic, rule-based exercise selection for one session (locked v1
- * scope: no AI). Filters the library by the user's equipment tier and hard
- * limitation conflicts, scores by overlap with the day's focus muscles,
- * then books a warm-up, 4 main movements (varied by first muscle group),
- * and a cool-down.
+ * scope: no AI). Filters the library by the user's equipment capabilities
+ * and hard limitation conflicts, scores by overlap with the day's focus
+ * muscles, then books a cardio warm-up + mobility warm-up, 4 main
+ * movements (varied by first muscle group), and a cool-down.
  */
 export function selectSessionExercises(
   focusMuscles: string[],
@@ -84,7 +101,7 @@ export function selectSessionExercises(
   library: ExerciseRow[],
 ): SessionExerciseInsert[] {
   const usable = library.filter(
-    (ex) => EQUIPMENT_TIER[ex.equipment] <= EQUIPMENT_TIER[equipment] && !conflictsHard(ex, limitations),
+    (ex) => equipmentAllows(equipment, ex.equipment) && !conflictsHard(ex, limitations),
   );
   const bySlug = new Map(usable.map((ex) => [ex.slug, ex]));
 
@@ -103,7 +120,13 @@ export function selectSessionExercises(
     });
   };
 
-  const warmup = WARMUP_SLUGS.map((s) => bySlug.get(s)).find(Boolean);
+  // Warm-up block: a few minutes of easy cardio (treadmill / bike / rope /
+  // in-place, whatever the equipment allows), then one mobility drill.
+  const cardioWarmup = CARDIO_WARMUP_SLUGS.map((s) => bySlug.get(s)).find(Boolean);
+  if (cardioWarmup) {
+    push(cardioWarmup, { is_warmup: true, sets: 1, dose_type: "time", seconds: 180, reps_min: null, reps_max: null, rest_seconds: 0 });
+  }
+  const warmup = WARMUP_SLUGS.map((s) => bySlug.get(s)).find((ex) => ex && ex.slug !== cardioWarmup?.slug);
   if (warmup) {
     push(warmup, { is_warmup: true, sets: 1, dose_type: "time", seconds: 60, reps_min: null, reps_max: null, rest_seconds: 0 });
   }

@@ -18,6 +18,7 @@ export async function ensureWorkoutLog(planDayId: string): Promise<string> {
     .eq("user_id", user.id)
     .eq("plan_day_id", planDayId)
     .eq("status", "in_progress")
+    .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (existing) return existing.id;
@@ -40,6 +41,12 @@ export async function setExerciseLogged(
 ) {
   const supabase = await createClient();
   if (logged) {
+    // Idempotent: never leave duplicate rows for the same exercise
+    await supabase
+      .from("exercise_logs")
+      .delete()
+      .eq("workout_log_id", workoutLogId)
+      .eq("exercise_id", exerciseId);
     await supabase.from("exercise_logs").insert({
       workout_log_id: workoutLogId,
       exercise_id: exerciseId,

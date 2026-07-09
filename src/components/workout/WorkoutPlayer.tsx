@@ -41,13 +41,42 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
   const [done, setDone] = useState<Set<string>>(new Set(exercises.filter((e) => e.done).map((e) => e.id)));
   const [openId, setOpenId] = useState<string | null>(exercises.find((e) => !e.done)?.id ?? null);
   const [reps, setReps] = useState<Record<string, { rep: number; set: number }>>({});
-  const [celebrate, setCelebrate] = useState<null | { badges: { name: string; description: string }[]; reps: number; minutes: number }>(null);
+  const [celebrate, setCelebrate] = useState<null | { badges: { name: string; description: string }[]; reps: number; minutes: number; exercises: number }>(null);
   const [, startTransition] = useTransition();
   const logIdRef = useRef<string | null>(existingLogId);
   const startedAtRef = useRef(Date.now());
 
   const required = exercises.filter((e) => !e.isOptional);
   const doneCount = required.filter((e) => done.has(e.id)).length;
+
+  // ---- Checkpoints: survive refresh / accidental close --------------------
+  const storageKey = `repup-checkpoint-${dayId}`;
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { done?: string[]; reps?: Record<string, { rep: number; set: number }> };
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage only exists client-side; reading it in the initializer would break SSR hydration
+      if (saved.reps) setReps((p) => ({ ...saved.reps, ...p }));
+      if (saved.done?.length) {
+        setDone((prev) => {
+          const next = new Set(prev);
+          for (const id of saved.done!) if (exercises.some((e) => e.id === id)) next.add(id);
+          return next;
+        });
+      }
+    } catch {
+      /* corrupt checkpoint — ignore */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({ done: Array.from(done), reps }));
+    } catch {
+      /* storage full/unavailable — non-fatal */
+    }
+  }, [done, reps, storageKey]);
 
   async function getLogId(): Promise<string> {
     if (!logIdRef.current) logIdRef.current = await ensureWorkoutLog(dayId);
@@ -77,10 +106,14 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
         const now = new Date();
         const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
         const res = await completeWorkout(logId, localDate, now.getHours(), totalRepsLogged() + (e.doseType === "reps" ? 0 : 0));
+        try {
+          localStorage.removeItem(storageKey); // workout finished — clear checkpoint
+        } catch {}
         setCelebrate({
           badges: res.newBadges,
           reps: totalRepsLogged(),
           minutes: Math.max(1, Math.round((Date.now() - startedAtRef.current) / 60000)),
+          exercises: required.length,
         });
       }
     });
@@ -142,6 +175,9 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
               onToggleOpen={() => setOpenId(openId === e.id ? null : e.id)}
               onRep={(rep, set) => setReps((p) => ({ ...p, [e.id]: { rep, set } }))}
               onComplete={() => toggleDone(e)}
+              onAutoComplete={() => {
+                if (!done.has(e.id)) toggleDone(e);
+              }}
             />
           ))}
         </div>
@@ -151,8 +187,8 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
         </div>
       </div>
 
-      {/* Completion celebration */}
-      {celebrate && <Celebration data={celebrate} onDone={() => router.push("/today")} />}
+      {/* Completion celebration — fades the whole session out to the plan */}
+      {celebrate && <Celebration data={celebrate} onDone={() => router.push("/plan")} />}
     </div>
   );
 }
@@ -166,6 +202,7 @@ function ExerciseRow({
   onToggleOpen,
   onRep,
   onComplete,
+  onAutoComplete,
 }: {
   e: PlayerExercise;
   first: boolean;
@@ -175,6 +212,7 @@ function ExerciseRow({
   onToggleOpen: () => void;
   onRep: (rep: number, set: number) => void;
   onComplete: () => void;
+  onAutoComplete: () => void;
 }) {
   const meta =
     (e.isWarmup ? "Warm-up · " : e.isCooldown ? "Cool-down · " : "") +
@@ -213,9 +251,9 @@ function ExerciseRow({
           <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 12, opacity: open ? 1 : 0, transition: "opacity .3s ease" }}>
             <ExerciseDemo pattern={e.pattern} animate={open} caption={e.formCue ? undefined : undefined} />
             {e.doseType === "reps" ? (
-              <RepTracker sets={e.sets} target={e.repsMax ?? 10} state={repState} onChange={onRep} />
+              <RepTracker sets={e.sets} target={e.repsMax ?? 10} state={repState} isDone={isDone} onChange={onRep} onFinishAll={onAutoComplete} />
             ) : (
-              <Timer seconds={e.seconds ?? 30} sets={e.sets} state={repState} onChange={onRep} />
+              <Timer seconds={e.seconds ?? 30} sets={e.sets} state={repState} isDone={isDone} onChange={onRep} onFinishAll={onAutoComplete} />
             )}
             {e.formCue && (
               <div style={infoBlock("blue")}>
@@ -257,10 +295,47 @@ function ExerciseRow({
   );
 }
 
-function RepTracker({ sets, target, state, onChange }: { sets: number; target: number; state: { rep: number; set: number }; onChange: (rep: number, set: number) => void }) {
+function SetDots({ sets, state, isDone, target }: { sets: number; state: { rep: number; set: number }; isDone: boolean; target?: number }) {
+  const dotColor = (i: number) => {
+    const n = i + 1;
+    // Green: exercise done, a past set, or the current (final) set just hit its target
+    if (isDone || n < state.set || (n === state.set && target != null && state.rep >= target)) return "var(--green)";
+    if (n === state.set) return "var(--blue)";
+    return "var(--ink-faint)";
+  };
+  return (
+    <div style={{ display: "flex", gap: 6 }}>
+      {Array.from({ length: sets }, (_, i) => (
+        <span key={i} style={{ width: 7, height: 7, borderRadius: 999, background: dotColor(i), transition: "background .2s ease" }} />
+      ))}
+    </div>
+  );
+}
+
+function RepTracker({
+  sets,
+  target,
+  state,
+  isDone,
+  onChange,
+  onFinishAll,
+}: {
+  sets: number;
+  target: number;
+  state: { rep: number; set: number };
+  isDone: boolean;
+  onChange: (rep: number, set: number) => void;
+  onFinishAll: () => void;
+}) {
   const inc = () => {
+    if (state.rep + 1 >= target && state.set >= sets) {
+      // Final rep of the final set: light the last dot and complete the exercise
+      onChange(target, sets);
+      if (state.rep + 1 === target) onFinishAll();
+      return;
+    }
     if (state.rep + 1 > target) {
-      if (state.set < sets) onChange(0, state.set + 1);
+      onChange(0, state.set + 1);
     } else onChange(state.rep + 1, state.set);
   };
   const dec = () => {
@@ -270,11 +345,7 @@ function RepTracker({ sets, target, state, onChange }: { sets: number; target: n
   };
   return (
     <div style={{ background: "var(--bg-elev)", borderRadius: 14, padding: 14, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-      <div style={{ display: "flex", gap: 6 }}>
-        {Array.from({ length: sets }, (_, i) => (
-          <span key={i} style={{ width: 7, height: 7, borderRadius: 999, background: i + 1 < state.set ? "var(--green)" : i + 1 === state.set ? "var(--blue)" : "var(--ink-faint)", transition: "background .2s ease" }} />
-        ))}
-      </div>
+      <SetDots sets={sets} state={state} isDone={isDone} target={target} />
       <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
         <RoundBtn label="−" tinted={false} onClick={dec} />
         <div style={{ fontSize: 38, fontWeight: 800, fontVariantNumeric: "tabular-nums", minWidth: 96, textAlign: "center" }}>
@@ -289,7 +360,21 @@ function RepTracker({ sets, target, state, onChange }: { sets: number; target: n
   );
 }
 
-function Timer({ seconds, sets, state, onChange }: { seconds: number; sets: number; state: { rep: number; set: number }; onChange: (rep: number, set: number) => void }) {
+function Timer({
+  seconds,
+  sets,
+  state,
+  isDone,
+  onChange,
+  onFinishAll,
+}: {
+  seconds: number;
+  sets: number;
+  state: { rep: number; set: number };
+  isDone: boolean;
+  onChange: (rep: number, set: number) => void;
+  onFinishAll: () => void;
+}) {
   const [left, setLeft] = useState(seconds);
   const [running, setRunning] = useState(false);
   const endRef = useRef(0);
@@ -301,20 +386,21 @@ function Timer({ seconds, sets, state, onChange }: { seconds: number; sets: numb
       setLeft(remain);
       if (remain === 0) {
         setRunning(false);
-        if (state.set < sets) onChange(0, state.set + 1);
-        setLeft(seconds);
+        if (state.set < sets) {
+          onChange(0, state.set + 1);
+          setLeft(seconds);
+        } else {
+          // Final set finished: complete the exercise
+          onFinishAll();
+        }
       }
     }, 250);
     return () => clearInterval(iv);
-  }, [running, seconds, sets, state.set, onChange]);
+  }, [running, seconds, sets, state.set, onChange, onFinishAll]);
 
   return (
     <div style={{ background: "var(--bg-elev)", borderRadius: 14, padding: 14, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-      <div style={{ display: "flex", gap: 6 }}>
-        {Array.from({ length: sets }, (_, i) => (
-          <span key={i} style={{ width: 7, height: 7, borderRadius: 999, background: i + 1 < state.set ? "var(--green)" : i + 1 === state.set ? "var(--blue)" : "var(--ink-faint)" }} />
-        ))}
-      </div>
+      <SetDots sets={sets} state={state} isDone={isDone} />
       <div style={{ fontSize: 38, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{left}s</div>
       <div style={{ display: "flex", gap: 10 }}>
         <button
@@ -343,19 +429,27 @@ function Timer({ seconds, sets, state, onChange }: { seconds: number; sets: numb
   );
 }
 
-function Celebration({ data, onDone }: { data: { badges: { name: string; description: string }[]; reps: number; minutes: number }; onDone: () => void }) {
+function Celebration({ data, onDone }: { data: { badges: { name: string; description: string }[]; reps: number; minutes: number; exercises: number }; onDone: () => void }) {
   const [shown, setShown] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   useEffect(() => {
     const raf = requestAnimationFrame(() => requestAnimationFrame(() => setShown(true)));
     return () => cancelAnimationFrame(raf);
   }, []);
+  function leave() {
+    if (leaving) return;
+    setLeaving(true);
+    // Let the fade-to-black play, then land on the plan
+    setTimeout(onDone, 600);
+  }
   return (
     <div
+      onClick={leave}
       style={{
         position: "fixed",
         inset: 0,
         zIndex: 200,
-        background: "rgba(10,13,18,0.92)",
+        background: leaving ? "var(--bg)" : "rgba(10,13,18,0.92)",
         backdropFilter: "blur(10px)",
         WebkitBackdropFilter: "blur(10px)",
         display: "flex",
@@ -364,9 +458,20 @@ function Celebration({ data, onDone }: { data: { badges: { name: string; descrip
         justifyContent: "center",
         padding: 28,
         opacity: shown ? 1 : 0,
-        transition: "opacity .4s ease",
+        transition: "background .55s ease",
       }}
     >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          width: "100%",
+          opacity: leaving ? 0 : shown ? 1 : 0,
+          transform: leaving ? "scale(0.96) translateY(-8px)" : "scale(1)",
+          transition: "opacity .5s ease, transform .55s cubic-bezier(.4,0,.2,1)",
+        }}
+      >
       <div style={{ animation: shown ? "burstIn .7s cubic-bezier(.4,0,.2,1) both" : "none" }}>
         <svg width={96} height={96} viewBox="0 0 64 64" style={{ transform: "rotate(-90deg)", filter: "drop-shadow(0 0 22px rgba(48,209,88,.45))" }}>
           <circle cx={32} cy={32} r={28} fill="none" stroke="var(--hairline)" strokeWidth={6} />
@@ -374,8 +479,33 @@ function Celebration({ data, onDone }: { data: { badges: { name: string; descrip
         </svg>
       </div>
       <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.02em", marginTop: 18 }}>Workout complete 💪</div>
-      <div style={{ fontSize: 15, fontWeight: 500, color: "var(--ink-dim)", marginTop: 6, fontVariantNumeric: "tabular-nums" }}>
-        {data.minutes} min{data.reps > 0 ? ` · ${data.reps} reps` : ""}
+      {/* Summary tiles, staggered in */}
+      <div style={{ display: "flex", gap: 10, marginTop: 18, width: "100%", maxWidth: 340 }}>
+        {(
+          [
+            [String(data.exercises), "exercises"],
+            [String(data.minutes), "minutes"],
+            ...(data.reps > 0 ? ([[String(data.reps), "reps"]] as const) : []),
+          ] as const
+        ).map(([num, label], i) => (
+          <div
+            key={label}
+            style={{
+              flex: 1,
+              background: "var(--card)",
+              border: "1px solid var(--card-border)",
+              borderRadius: 14,
+              padding: "12px 8px",
+              textAlign: "center",
+              opacity: shown ? 1 : 0,
+              transform: shown ? "translateY(0)" : "translateY(14px)",
+              transition: `opacity .45s ease ${250 + i * 120}ms, transform .5s cubic-bezier(.4,0,.2,1) ${250 + i * 120}ms`,
+            }}
+          >
+            <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{num}</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-dim)", marginTop: 2 }}>{label}</div>
+          </div>
+        ))}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 22, width: "100%", maxWidth: 340 }}>
         {data.badges.map((b, i) => (
@@ -404,11 +534,15 @@ function Celebration({ data, onDone }: { data: { badges: { name: string; descrip
         ))}
       </div>
       <button
-        onClick={onDone}
+        onClick={(e) => {
+          e.stopPropagation();
+          leave();
+        }}
         style={{ marginTop: 28, width: "100%", maxWidth: 340, padding: 15, borderRadius: 12, background: "var(--blue)", color: "#fff", fontSize: 15, fontWeight: 700 }}
       >
-        Done
+        {leaving ? "" : "Done"}
       </button>
+      </div>
       <style>{`@keyframes burstIn { 0% { transform: scale(.55); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }`}</style>
     </div>
   );

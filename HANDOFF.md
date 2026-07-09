@@ -5,7 +5,56 @@ should read this first, then CLAUDE.md, then docs/FD.md.
 
 ---
 
-## 2026-07-09 (latest) — Frankfurt migration verified; editable settings shipped
+## 2026-07-09 (Cowork, latest) — Player bugs fixed; library + month view + animations
+
+Owner-reported fixes (all verified with `tsc` + production build):
+
+- **Set 3/3 bug**: finishing the final set never turned its dot green or
+  completed the exercise — the rep tracker/timer had no last-set handler.
+  Now the final rep/final timer lights the dot and auto-completes the
+  exercise (guarded so it can't toggle a done exercise back off).
+- **Refresh recovery**: set/rep progress now checkpoints to localStorage
+  per day (cleared on completion), the workout page reads exercise logs
+  across ALL open logs (a race could create duplicates and the page could
+  read the wrong one), `ensureWorkoutLog` picks the newest, and exercise
+  logging is idempotent (delete-then-insert).
+- **Magic-link error**: /onboarding now parses Supabase's hash errors
+  (#error_code=otp_expired…) into a friendly message + reopens the email
+  field. Root cause is still the missing `/auth/callback` redirect
+  allow-list entry (see TODO ⚠️ — one-click owner fix in the dashboard).
+
+Features:
+
+- **Plan month view**: Week/Month segmented toggle; calendar projects the
+  weekly template onto any month, green = completed (from workout_logs
+  dates), blue = planned, taps open the session editor.
+- **Library expansion — migrations 0008/0009 written but NOT APPLIED yet**:
+  new `park` equipment tier (public calisthenics parks; capability-set
+  selection replaces the linear tier — park and home-basic are disjoint),
+  21 new exercises (treadmill/bike/rope/high-knee warmups, bodyweight
+  mains incl. burpee/wall-sit/pike push-up/doorway row, park pull-up/
+  chin-up/dips/inverted row/hanging knee raise/step-up), Compound tags so
+  "Full Body" days stop matching Core-only. UI: park option in
+  onboarding/profile/library filter.
+- **Warm-up block**: 3 min cardio (best available equipment) + 1 mobility
+  drill at the top of every generated session.
+- **Demo precision pass**: 25 new hand-authored SVG patterns in
+  ExerciseDemo (pullup, dip, invrow, kneeraise, stepup, burpee, deadbug,
+  birddog, superman, treadmill, bike, jumprope, situp, sideplank, wallsit,
+  catcow, childpose, jumpingjack, climber, calfraise, armcircle,
+  hipcircle, highknees, jumpsquat, pike); 0009 points every existing
+  exercise at its precise pattern.
+- **Workout intro/outro**: branded loading screen for /workout (barbell
+  outline draws in, stick figure reps, RepUp wordmark, speed lines) and a
+  finish sequence (summary tiles stagger in → whole overlay fades to bg →
+  lands on /plan).
+
+Notes for next session: apply 0008 then 0009 (separate transactions —
+enum value can't be added and used in one), then delete-Sydney checklist
+item still pending; sandbox mount showed stale file sizes for
+file-tool edits this session, bash-side writes were used instead.
+
+## 2026-07-09 — Frankfurt migration verified; editable settings shipped
 
 - Editable settings landed: Profile rows for body stats, goal, availability,
   equipment, and limitations now open real edit sheets with server actions;

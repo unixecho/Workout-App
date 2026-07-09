@@ -148,7 +148,7 @@ export function ProfileScreen(p: Props) {
 
         <Group label="Training">
           <Row label="Availability" value={`${days.filter(Boolean).length} days/week`} onClick={() => setSheet("availability")} />
-          <Row label="Equipment" value={equip === "full_gym" ? "Full gym" : equip === "basic" ? "Basic" : "None"} onClick={() => setSheet("equipment")} />
+          <Row label="Equipment" value={equip === "full_gym" ? "Full gym" : equip === "basic" ? "Basic" : equip === "park" ? "Park" : "None"} onClick={() => setSheet("equipment")} />
           <Row label="Limitations" value={limits.join(", ") || "None"} onClick={() => setSheet("limitations")} />
         </Group>
 
@@ -271,6 +271,7 @@ export function ProfileScreen(p: Props) {
           {(
             [
               ["none", "None"],
+              ["park", "Park"],
               ["basic", "Basic"],
               ["full_gym", "Full gym"],
             ] as const
