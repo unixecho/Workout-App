@@ -51,3 +51,6 @@ next-env.d.ts
 
 # Raw Claude Design exports (keep locally, not committed)
 /design src/
+
+# Supabase CLI local state
+/supabase/.temp/
