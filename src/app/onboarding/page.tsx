@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 import type { Equipment, Goal } from "@/lib/plan/generate";
+import { redirect } from "next/navigation";
 
 export default async function OnboardingPage() {
   const supabase = await createClient();
@@ -19,6 +20,14 @@ export default async function OnboardingPage() {
     )
     .eq("user_id", user.id)
     .single();
+
+  // A handle is only ever set at the very end of completeOnboarding — its
+  // presence means this user already finished the flow. Without this check,
+  // any authenticated user landing on /onboarding got dropped back into
+  // step 2 every time, even long after they'd completed it.
+  if (profile?.handle) {
+    redirect("/today");
+  }
 
   return (
     <OnboardingFlow
