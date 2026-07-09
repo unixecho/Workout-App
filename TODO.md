@@ -34,6 +34,17 @@
 - [ ] Port the reference prototype (index.html, originally
       C:\Users\Johnathan\Downloads\day1_workout_1.html) into a production
       React component, preserving its exact visual and motion quality
-- [ ] Port the other 9 approved mockups (`claude design/*.dc.html`) into
+- [ ] Port the other 8 approved mockups (`claude design/*.dc.html`) into
       their real route files (all currently placeholders — see TD.md route
-      list)
+      list). Onboarding done — see below.
+- [x] Port onboarding (S0-S5) to a real, working flow — **done 2026-07-09**.
+      Real Supabase auth (Google OAuth + magic link), real handle-uniqueness
+      check, v1 rule-based plan generator, real profile/plan writes.
+      Verified end-to-end in-browser.
+- [ ] ⚠️ Configure the Google OAuth provider in Supabase (Auth → Providers →
+      Google, needs a Google Cloud OAuth client ID/secret) — the "Continue
+      with Google" button is wired in code but will error until this is set
+      up. Magic link works today with no extra setup.
+- [ ] Seed the exercise library (`exercises` table is empty) — until then,
+      generated plans have real day/session shape but no exercises inside
+      each session (`session_exercises` stays empty)
