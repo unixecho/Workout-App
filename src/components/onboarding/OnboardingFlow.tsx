@@ -16,7 +16,10 @@ const TRANSITION_MS = 350;
 const BUILDING_MS = 600;
 
 const WEEKDAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
-const QUICK_LIMITATION_CHIPS = ["Knee", "Shoulder", "Back", "Wrist"];
+// Fixed vocabulary only — the exercise-adaptation system (docs/TD.md,
+// `exercises.adaptations`) can only act on these known tags. Free text here
+// would just be a string with no functional effect on plan generation.
+const LIMITATION_TAGS = ["Knee", "Shoulder", "Back", "Wrist", "Ankle", "Hip", "Elbow", "Neck"];
 
 const GOALS: { id: Goal; label: string; blurb: string; icon: ReactElement }[] = [
   {
@@ -126,7 +129,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
     return [true, true, false, true, true, false, false];
   });
   const [equip, setEquip] = useState<Equipment>(initialProfile?.equipment ?? "basic");
-  const [limits, setLimits] = useState(initialProfile?.limitations?.join(", ") ?? "");
+  const [limitations, setLimitations] = useState<string[]>(initialProfile?.limitations ?? []);
 
   // S5
   const [building, setBuilding] = useState(false);
@@ -287,9 +290,8 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
     }, 450);
   }
 
-  function addLimitationChip(label: string) {
-    if (limits.includes(label)) return;
-    setLimits(limits ? limits.replace(/,?\s*$/, ", ") + label : label);
+  function toggleLimitation(tag: string) {
+    setLimitations((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   }
 
   const activeDays = weekOn;
@@ -315,10 +317,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
         targetWeightKg: goal === "lose_weight" ? Math.round(targetKg * 10) / 10 : null,
         activeDays,
         equipment: equip,
-        limitations: limits
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
+        limitations,
       });
     } catch (err) {
       setAccepted(false);
@@ -876,47 +875,34 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
         </div>
 
         <div style={{ ...cardStyle, padding: 16 }}>
-          <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", marginBottom: 12 }}>
+          <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", marginBottom: 4 }}>
             Anything we should work around?
           </div>
-          <textarea
-            rows={2}
-            placeholder="Old injuries, joints to protect…"
-            value={limits}
-            onChange={(e) => setLimits(e.target.value)}
-            style={{
-              width: "100%",
-              resize: "none",
-              background: "var(--fill-resting)",
-              border: "1px solid var(--card-border)",
-              borderRadius: 12,
-              padding: "12px 14px",
-              color: "var(--ink)",
-              fontSize: 14,
-              fontWeight: 500,
-              lineHeight: 1.5,
-              outline: "none",
-            }}
-          />
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-            {QUICK_LIMITATION_CHIPS.map((label) => (
-              <button
-                key={label}
-                onClick={() => addLimitationChip(label)}
-                style={{
-                  border: "none",
-                  borderRadius: 999,
-                  padding: "7px 14px",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  background: "var(--fill-resting)",
-                  color: "var(--ink-dim)",
-                  transition: "background .15s ease, transform .15s ease",
-                }}
-              >
-                + {label}
-              </button>
-            ))}
+          <div style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-faint)", marginBottom: 12 }}>
+            Tap any areas to protect — this drives which exercises get adapted or skipped.
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {LIMITATION_TAGS.map((tag) => {
+              const on = limitations.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  onClick={() => toggleLimitation(tag)}
+                  style={{
+                    border: `1px solid ${on ? "rgba(61,139,253,0.45)" : "var(--card-border)"}`,
+                    borderRadius: 999,
+                    padding: "7px 14px",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    background: on ? "rgba(61,139,253,0.18)" : "var(--fill-resting)",
+                    color: on ? "var(--blue)" : "var(--ink-dim)",
+                    transition: "background .15s ease, border-color .15s ease, transform .15s ease",
+                  }}
+                >
+                  {tag}
+                </button>
+              );
+            })}
           </div>
         </div>
 
