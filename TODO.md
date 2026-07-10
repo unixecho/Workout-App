@@ -172,8 +172,6 @@
 - [ ] Badge engine: implement remaining rule types (full_week, comeback,
       goal_reached, perfect_form, friend/social) + streak freeze auto-apply
       (earn 1 per 7 sessions, bank 2)
-- [ ] Realtime subscriptions (feed inserts, fist-bump counts, incoming
-      requests) per docs/TD.md — currently request/response only
 - [ ] Session Editor drag-to-reorder; "Move to…" / "Duplicate" day actions
 - [ ] Workout Player: "Remove from today" + "End workout early" flows
 - [ ] Notifications (workout reminder, streak-at-risk, social batch) — needs

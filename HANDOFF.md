@@ -5,6 +5,82 @@ should read this first, then CLAUDE.md, then docs/FD.md.
 
 ---
 
+## 2026-07-10 (latest) — Auth fixes, warmup category, realtime social, owner bug-fix round
+
+Owner tested this session's fixes live and confirmed they work. Three
+sub-rounds, all pushed to `main` and deployed:
+
+**Round 1 — auth reliability**
+- Fixed magic-link failures silently dropping the session: `/auth/callback`
+  now forwards Supabase verify + code-exchange errors as query params;
+  onboarding surfaces them with a resend prompt instead of a blank step 0.
+- Confirmed the Frankfurt Supabase redirect-URL allow-list fix (owner did
+  this in the dashboard) resolved the otp_expired issue.
+
+**Round 2 — warmup category + friends social layer** (migrations 0010–0013,
+all applied to Frankfurt prod)
+- Warmup category: `Warmup` tag + 7 new exercises (rower, elliptical, leg
+  swings, torso twists, shoulder rolls, butt kicks, dead hang) with
+  hand-authored demo animations; focus-aware warm-up selection; Library
+  filter.
+- Realtime friends feed, "You finished…" self-perspective activity,
+  Steam-style "you became friends" events, friend-card fist-bump with a
+  private notification to the target, Friends-tab request badge.
+- Availability changes auto-regenerate the week; body stats (age/height/
+  weight) are sliders now, not typed fields.
+
+**Round 3 — owner bug reports on the above** (no new migrations, app-code
+only)
+- **Real root cause of "activity doesn't update" found and fixed**:
+  `FriendsScreen` seeded `items` via `useState(feed)`, which never re-reads
+  the prop after the initial mount. `router.refresh()` (whether from
+  realtime or a new visibility-change fallback) fetched fresh data
+  server-side but never displayed it — only a full remount (navigate away
+  and back) did. Fixed with `useEffect(() => setItems(feed), [feed])`. Also
+  hardened both realtime subscriptions (Friends feed + TabBar badge) with
+  `onAuthStateChange` instead of a one-shot `getSession()` (avoids a
+  hydration race that connects to Realtime as anon, which RLS then silently
+  filters to nothing), and added a visibility/focus refresh as a
+  belt-and-suspenders fallback since mobile browsers drop websockets when
+  backgrounded.
+- Fixed a `NEXT_REDIRECT` flash after finishing onboarding — the client
+  catch around `completeOnboarding()` was briefly rendering Next's internal
+  redirect signal as a real error before navigation completed.
+- Removed the magic-link option from onboarding entirely (owner was
+  rate-limited; Google-only now).
+- Added a red badge on the Friends screen's own "Friends" segment toggle
+  (not just the tab bar) so a pending request is discoverable from the
+  default Activity view.
+- Availability sheet now warns before discarding unsaved changes
+  (Discard / Keep editing); also fixed a latent bug where the row summary
+  kept showing a stale draft count after a cancelled edit.
+- **regenerateWeek correctness fix**: `plan_days` is a single recurring
+  weekly template shared by Week *and* Month view (not one row per calendar
+  date) — but the "already completed" guard checked all-time logs, so any
+  day-of-week ever completed in a past week was permanently frozen out of
+  regeneration. Scoped the check to the current week and added a
+  `full=true` mode (used on availability save) that regenerates every slot,
+  not just from-today-onward, so an availability change now correctly
+  propagates through both Week and Month immediately.
+- Feed poke entries ("X fist-bumped you") now have a "Bump back" button.
+
+Also from earlier in the session: iOS-quality slider polish (thumb/track
+proportions, fill-to-thumb alignment, whole-kg steps) and a two-layer scroll
+fix for onboarding steps clipping on iPhone Safari/Chrome; session editor
+warm-ups are now swappable, not just dose-editable.
+
+**Verified**: `tsc --noEmit` clean, production build clean throughout, all
+four Supabase migrations (0010–0013) applied and spot-checked against
+Frankfurt prod via the SQL editor, onboarding Google-only flow checked in
+preview. Owner tested live on-device and confirmed working.
+
+**Next**: nothing outstanding from this session. Standing items from
+TODO.md — full v1 feature list is done except Badge engine remaining rule
+types (full_week/comeback/goal/perfect_form/social), Session Editor
+drag-to-reorder, push notifications, PWA manifest, Google OAuth consent
+screen verification before public launch, and the preview-vs-prod Supabase
+environment decision.
+
 ## 2026-07-09 (Cowork, latest) — Player bugs fixed; library + month view + animations
 
 Owner-reported fixes (all verified with `tsc` + production build):
