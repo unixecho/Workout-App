@@ -18,6 +18,21 @@
       limitations) + regenerate-remaining-days prompt on save (2026-07-09)
 - [x] Instant tab switching (loading.tsx skeletons) + parallelized query
       waterfalls on every screen (2026-07-09)
+- [x] **Migrations 0008 + 0009 applied to Frankfurt** (2026-07-10) — park
+      equipment tier, 21 new exercises, 11 demo-pattern updates, Compound
+      tags all live and verified in prod
+- [x] **Redirect URL fix confirmed live** (2026-07-10) — Frankfurt project's
+      Auth → URL Configuration now allow-lists
+      `https://workout-app-jade-theta.vercel.app/auth/callback` alongside
+      the bare domain and localhost callback; this was the suspected cause
+      of the owner's otp_expired magic-link error
+- [x] **Real root cause of the magic-link failure found + fixed** (2026-07-10)
+      — `/auth/callback` silently swallowed both Supabase verify errors
+      (expired/already-used token) and `exchangeCodeForSession` failures,
+      always redirecting to `/onboarding` with no session and no
+      explanation. Now forwards `error_code`/`error_description` as query
+      params; `OnboardingFlow` reads those (previously only read hash-based
+      errors) and shows the friendly resend prompt. Verified in preview.
 - [x] **Migrated Supabase Sydney → Frankfurt (eu-central-1)** (2026-07-09) —
       new project `pjzdqxbmpaplmrqecdqf`, all 7 migrations reapplied (0007
       adds explicit table grants the fresh project didn't have by default).
@@ -53,23 +68,10 @@
 
 ## Open
 
-- [ ] ⚠️ **Apply migrations 0008 + 0009 to the Frankfurt project** (SQL
-      editor or `supabase db push`) — the park tier, new exercises, and
-      precise animation patterns don't exist in prod until then. 0008 must
-      run before/separately from 0009 (enum value + its first use can't
-      share a transaction).
-- [ ] ⚠️ **Redirect URLs on the new Supabase project only allow-list the
-      bare domain, not the exact `/auth/callback` path** — live-tested and
-      confirmed Supabase silently truncates the redirect target, which
-      would make login silently fail in production. Fix: Authentication →
-      URL Configuration → Redirect URLs → add
-      `https://workout-app-jade-theta.vercel.app/auth/callback` (or a
-      `.../**` wildcard). One click, not yet done. **This is almost
-      certainly the cause of the owner's expired-magic-link error
-      (otp_expired on /onboarding).**
-- [ ] Delete the old Sydney Supabase project once the above is confirmed
-      fixed and a real sign-in has been tested (test accounts don't carry
-      over — fresh start on Frankfurt)
+- [ ] Delete the old Sydney Supabase project now that the redirect-URL fix
+      is confirmed live (see Done) — do this once a real sign-in has been
+      tested end-to-end on Frankfurt (test accounts don't carry over —
+      fresh start on Frankfurt)
 - [ ] Polish pass against the mockups: motion/:active states everywhere,
       richer week-strip/hero states (per-exercise demo keyframes: done
       2026-07-09)

@@ -238,16 +238,19 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
     if (!isNaN(n)) setWeightKg(metric ? n : n / 2.2046);
   }
 
-  // Surface auth errors Supabase returns in the URL hash (e.g. an expired or
-  // already-used magic link: #error=access_denied&error_code=otp_expired).
-  // Without this the user lands on onboarding with no explanation.
+  // Surface auth errors Supabase returns either in the URL hash (implicit
+  // flow, e.g. #error=access_denied&error_code=otp_expired) or as query
+  // params forwarded by /auth/callback (PKCE flow \u2014 an expired/already-used
+  // link, or a code-exchange failure). Without this the user silently lands
+  // back on step 0 with no explanation.
   useEffect(() => {
-    if (!window.location.hash) return;
-    const params = new URLSearchParams(window.location.hash.slice(1));
+    const hashParams = window.location.hash ? new URLSearchParams(window.location.hash.slice(1)) : null;
+    const queryParams = new URLSearchParams(window.location.search);
+    const params = hashParams?.get("error_code") || hashParams?.get("error") ? hashParams : queryParams;
     const code = params.get("error_code");
     const err = params.get("error");
     if (!code && !err) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- URL hash only exists client-side, must be read post-mount
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- URL only exists client-side, must be read post-mount
     setAuthError(
       code === "otp_expired"
         ? "That sign-in link has expired or was already used. Enter your email and we\u2019ll send a fresh one."
@@ -255,8 +258,8 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
     );
     setEmailOpen(true);
     setMagicLinkSent(false);
-    // Clean the hash so a refresh doesn\u2019t re-show a stale error
-    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    // Clean the hash/query so a refresh doesn\u2019t re-show a stale error
+    window.history.replaceState(null, "", window.location.pathname);
   }, []);
 
   async function handleGoogleSignIn() {
