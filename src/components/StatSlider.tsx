@@ -1,11 +1,13 @@
 "use client";
 
 /**
- * iOS-quality stat slider (STYLE.md motion bar): filled track, large white
- * thumb with :active scale, big tabular-nums readout. Value is always the
- * canonical metric number — `format` owns the display (so imperial is a
+ * iOS-quality stat slider (STYLE.md motion bar): thin filled track, large
+ * white thumb with :active scale, big tabular-nums readout. Value is always
+ * the canonical metric number — `format` owns the display (so imperial is a
  * pure presentation concern).
  */
+const THUMB = 28; // keep in sync with .stat-slider thumb width in globals.css
+
 export function StatSlider({
   label,
   value,
@@ -24,10 +26,14 @@ export function StatSlider({
   onChange: (v: number) => void;
 }) {
   const clamped = Math.min(max, Math.max(min, value));
-  const pct = ((clamped - min) / (max - min)) * 100;
+  const frac = (clamped - min) / (max - min);
+  // Align the fill edge with the thumb *center*, which the browser insets by
+  // half the thumb width at each end — otherwise the colored portion drifts
+  // out of ratio with the thumb near the extremes.
+  const fillStop = `calc(${frac * 100}% + ${(0.5 - frac) * THUMB}px)`;
   return (
     <div style={{ padding: "12px 4px 6px" }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ink-dim)" }}>{label}</div>
         <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.01em", color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>
           {format(clamped)}
@@ -43,7 +49,7 @@ export function StatSlider({
         value={clamped}
         onChange={(e) => onChange(parseFloat(e.target.value))}
         style={{
-          ["--track-fill" as string]: `linear-gradient(to right, var(--blue) ${pct}%, var(--fill-resting) ${pct}%)`,
+          ["--track-fill" as string]: `linear-gradient(to right, var(--blue) ${fillStop}, var(--fill-resting) ${fillStop})`,
         }}
       />
     </div>

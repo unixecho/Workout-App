@@ -49,3 +49,24 @@ export async function saveSession(
   revalidatePath("/today");
   revalidatePath(`/sessions/${planDayId}`);
 }
+
+/**
+ * Swap the exercise behind a session row (used for warm-ups — FD §4). Only the
+ * `exercise_id` changes; the dose (sets/seconds/rest) is kept. RLS scopes the
+ * update to the owner's plan.
+ */
+export async function swapExercise(sessionExerciseId: string, newExerciseId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in");
+
+  await supabase
+    .from("session_exercises")
+    .update({ exercise_id: newExerciseId })
+    .eq("id", sessionExerciseId);
+
+  revalidatePath("/plan");
+  revalidatePath("/today");
+}

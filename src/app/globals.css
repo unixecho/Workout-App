@@ -128,50 +128,52 @@ input[type="range"].stat-slider {
   appearance: none;
   display: block;
   width: 100%;
-  height: 30px;
+  height: 28px;
   margin: 0;
   background: transparent;
   touch-action: pan-y;
 }
+/* iOS UISlider proportions: thin 4px track, 28px white thumb with a soft
+   drop shadow, accent-filled left portion (passed in via --track-fill). */
 input[type="range"].stat-slider::-webkit-slider-runnable-track {
-  height: 6px;
+  height: 4px;
   border-radius: 999px;
   background: var(--track-fill, var(--fill-resting));
 }
 input[type="range"].stat-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 26px;
-  height: 26px;
-  margin-top: -10px;
+  width: 28px;
+  height: 28px;
+  margin-top: -12px;
   border-radius: 999px;
-  border: none;
+  border: 0.5px solid rgba(0, 0, 0, 0.04);
   background: #fff;
   box-shadow:
-    0 1px 4px rgba(0, 0, 0, 0.35),
-    0 4px 12px rgba(0, 0, 0, 0.25);
-  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    0 3px 8px rgba(0, 0, 0, 0.15),
+    0 1px 1px rgba(0, 0, 0, 0.16);
+  transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
 }
 input[type="range"].stat-slider:active::-webkit-slider-thumb {
-  transform: scale(1.15);
+  transform: scale(1.12);
 }
 input[type="range"].stat-slider::-moz-range-track {
-  height: 6px;
+  height: 4px;
   border-radius: 999px;
   background: var(--track-fill, var(--fill-resting));
 }
 input[type="range"].stat-slider::-moz-range-thumb {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   border: none;
   background: #fff;
   box-shadow:
-    0 1px 4px rgba(0, 0, 0, 0.35),
-    0 4px 12px rgba(0, 0, 0, 0.25);
-  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    0 3px 8px rgba(0, 0, 0, 0.15),
+    0 1px 1px rgba(0, 0, 0, 0.16);
+  transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
 }
 input[type="range"].stat-slider:active::-moz-range-thumb {
-  transform: scale(1.15);
+  transform: scale(1.12);
 }
 
 @keyframes feed-in {
@@ -183,6 +185,31 @@ input[type="range"].stat-slider:active::-moz-range-thumb {
     opacity: 1;
     transform: none;
   }
+}
+
+/* Gentle "tap me" wiggle for the friend-card fist-bump button. */
+@keyframes bump-nudge {
+  0%,
+  86%,
+  100% {
+    transform: rotate(0deg);
+  }
+  89% {
+    transform: rotate(-11deg);
+  }
+  93% {
+    transform: rotate(9deg);
+  }
+  97% {
+    transform: rotate(-5deg);
+  }
+}
+.bump-nudge {
+  animation: bump-nudge 3.4s ease-in-out infinite;
+}
+.bump-nudge:active {
+  transform: scale(0.9);
+  animation: none;
 }
 
 @keyframes pulseSkeleton {

@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { requireProfile } from "@/lib/data";
-import { SessionEditorScreen, type EditorExercise } from "@/components/sessions/SessionEditorScreen";
+import { equipmentAllows } from "@/lib/plan/exercises";
+import type { Equipment } from "@/lib/plan/generate";
+import { SessionEditorScreen, type EditorExercise, type SwapOption } from "@/components/sessions/SessionEditorScreen";
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -15,17 +17,24 @@ export default async function SessionEditorPage({ params }: { params: Promise<{ 
     .single();
   if (!day) notFound();
 
-  const { data: rows } = await supabase
-    .from("session_exercises")
-    .select("id, order_index, is_warmup, is_cooldown, is_optional, dose_type, sets, reps_min, reps_max, seconds, rest_seconds, exercises(slug, name, muscle_groups, adaptations)")
-    .eq("plan_day_id", dayId)
-    .order("order_index");
+  const [{ data: rows }, { data: warmupLib }] = await Promise.all([
+    supabase
+      .from("session_exercises")
+      .select("id, order_index, is_warmup, is_cooldown, is_optional, dose_type, sets, reps_min, reps_max, seconds, rest_seconds, exercises(id, slug, name, muscle_groups, adaptations)")
+      .eq("plan_day_id", dayId)
+      .order("order_index"),
+    supabase
+      .from("exercises")
+      .select("id, name, muscle_groups, equipment")
+      .contains("muscle_groups", ["Warmup"]),
+  ]);
 
   const exercises: EditorExercise[] = (rows ?? []).map((r) => {
-    const ex = r.exercises as unknown as { slug: string; name: string; muscle_groups: string[]; adaptations: Record<string, { note: string; avoid: boolean }> };
+    const ex = r.exercises as unknown as { id: string; slug: string; name: string; muscle_groups: string[]; adaptations: Record<string, { note: string; avoid: boolean }> };
     const warn = (profile.limitations ?? []).some((t: string) => ex.adaptations?.[t.toLowerCase()]);
     return {
       id: r.id,
+      exerciseId: ex.id,
       name: ex.name,
       muscles: ex.muscle_groups,
       isWarmup: r.is_warmup,
@@ -40,6 +49,12 @@ export default async function SessionEditorPage({ params }: { params: Promise<{ 
     };
   });
 
+  // Warm-up alternatives the user can swap in — only ones their equipment
+  // supports (docs/TD.md capability sets).
+  const warmupOptions: SwapOption[] = (warmupLib ?? [])
+    .filter((w) => equipmentAllows((profile.equipment ?? "none") as Equipment, w.equipment as Equipment))
+    .map((w) => ({ exerciseId: w.id, name: w.name, muscles: w.muscle_groups }));
+
   return (
     <SessionEditorScreen
       dayId={day.id}
@@ -47,6 +62,7 @@ export default async function SessionEditorPage({ params }: { params: Promise<{ 
       title={day.session_title ?? "Session"}
       usualMinutes={45}
       initialExercises={exercises}
+      warmupOptions={warmupOptions}
     />
   );
 }

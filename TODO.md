@@ -1,5 +1,33 @@
 # TODO
 
+## Done (2026-07-10, follow-up round)
+
+- [x] **Fixed realtime feed not updating**: the browser Supabase client's
+      realtime socket connected as `anon` before the session hydrated, so
+      RLS silently filtered out every row. Now calls
+      `supabase.realtime.setAuth(token)` before subscribing (Friends feed +
+      TabBar badge)
+- [x] **"Became friends" activity** (migration 0012, applied): accepting a
+      request emits a `friendship` event — "You and John are now friends 🤝"
+      — fanned out to both parties and their friends
+- [x] **Friends tab red badge**: pending incoming request count shown live
+      on the tab bar icon, seeded server-side + bumped via realtime
+- [x] **iPhone-style sliders**: thinner iOS track proportions, thumb-shadow
+      polish, fill edge now aligns to the thumb center at all values (was
+      drifting out of ratio near the ends); weight steps in whole kg (no
+      more 82.5 kg)
+- [x] **Onboarding no longer clips on iPhone**: each step now uses a
+      two-layer scroll (`min-height: 100%` inner flex column inside an
+      `overflow-y: auto` outer) so Days-per-week/Equipment/Limitations and
+      the CTA button are always reachable, verified at short viewports
+- [x] **Warm-up swappable**: session editor's warm-up rows get a "Swap
+      warm-up" picker with equipment-appropriate alternatives, not just
+      dose editing
+- [x] **Friend-card fist bump**: a gently-animated 👊 button next to each
+      friend's streak sends a direct poke; the target sees a live "X
+      fist-bumped you 👊" entry in their feed (migration 0013, applied —
+      poke events route to the target only, not a broadcast)
+
 ## Done (2026-07-10)
 
 - [x] Migrations 0008 + 0009 applied to Frankfurt (park tier, 21 exercises,

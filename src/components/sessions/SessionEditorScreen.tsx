@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Sheet } from "@/components/Sheet";
-import { saveSession } from "@/app/sessions/[dayId]/actions";
+import { saveSession, swapExercise } from "@/app/sessions/[dayId]/actions";
 
 export interface EditorExercise {
   id: string;
+  exerciseId: string;
   name: string;
   muscles: string[];
   isWarmup: boolean;
@@ -21,12 +22,19 @@ export interface EditorExercise {
   warns: boolean;
 }
 
+export interface SwapOption {
+  exerciseId: string;
+  name: string;
+  muscles: string[];
+}
+
 interface Props {
   dayId: string;
   dayName: string;
   title: string;
   usualMinutes: number;
   initialExercises: EditorExercise[];
+  warmupOptions: SwapOption[];
 }
 
 function doseSummary(e: EditorExercise): string {
@@ -42,12 +50,13 @@ function estimate(list: EditorExercise[]): number {
   return Math.max(5, Math.round(secs / 60));
 }
 
-export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usualMinutes, initialExercises }: Props) {
+export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usualMinutes, initialExercises, warmupOptions }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState(initialTitle);
   const [items, setItems] = useState(initialExercises);
   const [removed, setRemoved] = useState<string[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [swapOpen, setSwapOpen] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -57,6 +66,14 @@ export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usual
   const patch = (id: string, p: Partial<EditorExercise>) => {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...p } : i)));
     setDirty(true);
+  };
+
+  // Swap the warm-up in place. Persisted immediately (it's a whole-row change,
+  // not a dose tweak), then reflected locally.
+  const doSwap = (row: EditorExercise, opt: SwapOption) => {
+    setItems((prev) => prev.map((i) => (i.id === row.id ? { ...i, exerciseId: opt.exerciseId, name: opt.name, muscles: opt.muscles, warns: false } : i)));
+    setSwapOpen(false);
+    startTransition(() => swapExercise(row.id, opt.exerciseId));
   };
 
   const save = () =>
@@ -192,6 +209,17 @@ export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usual
               <StepperRow label="Seconds" value={open.seconds ?? 30} step={5} onChange={(v) => patch(open.id, { seconds: Math.max(10, Math.min(180, v)) })} />
             )}
             <StepperRow label="Rest between sets" display={`${open.restSeconds}s`} value={open.restSeconds} step={15} onChange={(v) => patch(open.id, { restSeconds: Math.max(0, Math.min(300, v)) })} />
+            {open.isWarmup && warmupOptions.length > 1 && (
+              <button
+                onClick={() => setSwapOpen(true)}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", padding: 14, borderRadius: 12, background: "rgba(255,159,10,0.14)", color: "var(--amber)", fontSize: 15, fontWeight: 700 }}
+              >
+                <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 3l4 4-4 4M20 7H8M8 21l-4-4 4-4M4 17h12" />
+                </svg>
+                Swap warm-up
+              </button>
+            )}
             <button
               onClick={() => {
                 setItems((prev) => prev.filter((i) => i.id !== open.id));
@@ -203,6 +231,33 @@ export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usual
             >
               Remove
             </button>
+          </div>
+        )}
+      </Sheet>
+
+      {/* Warm-up swap picker */}
+      <Sheet open={swapOpen} onClose={() => setSwapOpen(false)} title="Swap warm-up">
+        {open && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: "60vh", overflowY: "auto" }}>
+            {warmupOptions
+              .filter((o) => o.exerciseId !== open.exerciseId)
+              .map((o) => (
+                <button
+                  key={o.exerciseId}
+                  onClick={() => doSwap(open, o)}
+                  style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", padding: "12px 14px", borderRadius: 12, background: "var(--fill-resting)" }}
+                >
+                  <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(255,159,10,0.14)", color: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+                    {o.name.slice(0, 1)}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em" }}>{o.name}</div>
+                    <div style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-dim)" }}>
+                      {o.muscles.filter((m) => m !== "Warmup").slice(0, 2).join(" · ")}
+                    </div>
+                  </div>
+                </button>
+              ))}
           </div>
         )}
       </Sheet>

@@ -223,7 +223,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
     const inches = Math.round(cm / 2.54);
     return `${Math.floor(inches / 12)}'${inches % 12}"`;
   };
-  const fmtWeight = (kg: number) => (metric ? `${Math.round(kg * 2) / 2} kg` : `${Math.round(kg * 2.2046)} lb`);
+  const fmtWeight = (kg: number) => (metric ? `${Math.round(kg)} kg` : `${Math.round(kg * 2.2046)} lb`);
 
   // Surface auth errors Supabase returns either in the URL hash (implicit
   // flow, e.g. #error=access_denied&error_code=otp_expired) or as query
@@ -661,7 +661,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
           <Hairline />
           <StatSlider label="Height" value={heightCm} min={120} max={220} format={fmtHeight} onChange={setHeightCm} />
           <Hairline />
-          <StatSlider label="Weight" value={weightKg} min={35} max={200} step={0.5} format={fmtWeight} onChange={setWeightKg} />
+          <StatSlider label="Weight" value={weightKg} min={35} max={200} format={fmtWeight} onChange={setWeightKg} />
         </div>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -1073,19 +1073,30 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
 }
 
 function Screen({ style, children }: { style: CSSProperties; children: React.ReactNode }) {
+  // Two-layer scroll: the positioned outer element is the scroll container,
+  // the inner flex column carries `min-height: 100%` so `flex: 1` spacers
+  // still pin the bottom button when content fits, but overflow scrolls
+  // cleanly on iOS Safari/Chrome instead of clipping the lower cards.
   return (
     <div
       style={{
         position: "absolute",
         inset: 0,
-        display: "flex",
-        flexDirection: "column",
         overflowY: "auto",
-        padding: "calc(var(--safe-top) + 92px) 20px calc(var(--safe-bottom) + 28px)",
+        WebkitOverflowScrolling: "touch",
         ...style,
       }}
     >
-      {children}
+      <div
+        style={{
+          minHeight: "100%",
+          display: "flex",
+          flexDirection: "column",
+          padding: "calc(var(--safe-top) + 92px) 20px calc(var(--safe-bottom) + 28px)",
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 }

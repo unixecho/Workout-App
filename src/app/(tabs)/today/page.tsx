@@ -1,4 +1,5 @@
 import { getActivePlan, mondayIndex, requireProfile } from "@/lib/data";
+import { feedItemFrom, type ActivityEventRow } from "@/lib/feed";
 import { TodayScreen, type WeekTileState } from "@/components/today/TodayScreen";
 
 export default async function TodayPage() {
@@ -92,16 +93,9 @@ export default async function TodayPage() {
       todayIdx={todayIdx}
       badgeTeaser={next ? { name: next.name, toGo: next.at - (totalSessions ?? 0), frac: (totalSessions ?? 0) / next.at } : null}
       feed={(feed ?? []).map((f) => {
-        const ev = f.activity_events as unknown as { user_id: string; type: string; payload: Record<string, string | number> };
-        const own = ev?.user_id === user.id;
-        return {
-          name: own ? "You" : String(ev?.payload?.actor_name ?? "A friend"),
-          text:
-            ev?.type === "badge_earned"
-              ? `${own ? "earned" : "has earned"} ${ev.payload?.badge_name ?? "a badge"}`
-              : `${own ? "finished" : "has finished"} ${ev?.payload?.session_title ?? "a workout"}`,
-          when: new Date(f.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
-        };
+        const ev = { id: f.event_id, ...(f.activity_events as object) } as ActivityEventRow;
+        const item = feedItemFrom(f.event_id, f.created_at, ev, user.id);
+        return { name: item.name, text: item.text, when: item.when };
       })}
       dateLabel={now
         .toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })

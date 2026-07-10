@@ -216,8 +216,7 @@ export function ProfileScreen(p: Props) {
           value={weight}
           min={35}
           max={200}
-          step={0.5}
-          format={(v) => (units === "metric" ? `${Math.round(v * 2) / 2} kg` : `${Math.round(v * 2.2046)} lb`)}
+          format={(v) => (units === "metric" ? `${Math.round(v)} kg` : `${Math.round(v * 2.2046)} lb`)}
           onChange={setWeight}
         />
         <SaveButton

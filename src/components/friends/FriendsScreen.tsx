@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Sheet } from "@/components/Sheet";
 import { feedItemFrom, type ActivityEventRow, type FeedItem } from "@/lib/feed";
-import { respondToRequest, sendFriendRequest, toggleFistBump } from "@/app/(tabs)/friends/actions";
+import { pokeFriend, respondToRequest, sendFriendRequest, toggleFistBump } from "@/app/(tabs)/friends/actions";
 
 export type { FeedItem };
 
@@ -26,6 +26,7 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
   const [sentTo, setSentTo] = useState<Set<string>>(new Set());
   const [items, setItems] = useState<FeedItem[]>(feed);
   const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
+  const [pokedIds, setPokedIds] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
   const itemsRef = useRef(items);
   itemsRef.current = items;
@@ -33,11 +34,22 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
   // Live feed (docs/TD.md § Realtime usage): new feed_entries rows animate in
   // at the top, fist-bump counts stay in sync across clients, and an incoming
   // friend request refreshes the server-rendered people list.
+  //
+  // The realtime socket must carry the user's access token or it connects as
+  // `anon` and RLS filters out every row — so set auth before subscribing.
   useEffect(() => {
     const supabase = createClient();
-    const channel = supabase
-      .channel("friends-live")
-      .on(
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+    (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (cancelled) return;
+      await supabase.realtime.setAuth(session?.access_token ?? null);
+      channel = supabase
+        .channel("friends-live")
+        .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "feed_entries", filter: `recipient_id=eq.${userId}` },
         async (payload) => {
@@ -67,14 +79,16 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
           prev.map((i) => (i.eventId === eventId ? { ...i, bumpCount: Math.max(0, i.bumpCount - 1) } : i)),
         );
       })
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "friend_requests", filter: `addressee_id=eq.${userId}` },
-        () => router.refresh(),
-      )
-      .subscribe();
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "friend_requests", filter: `addressee_id=eq.${userId}` },
+          () => router.refresh(),
+        )
+        .subscribe();
+    })();
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
     };
   }, [userId, router]);
 
@@ -100,6 +114,12 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
       ),
     );
     startTransition(() => toggleFistBump(item.eventId, mine));
+  }
+
+  function poke(friend: FriendCard) {
+    if (pokedIds.has(friend.userId)) return;
+    setPokedIds((prev) => new Set(prev).add(friend.userId));
+    startTransition(() => pokeFriend(friend.userId));
   }
 
   return (
@@ -155,6 +175,11 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
           ) : (
             items.map((f) => {
               const clickable = f.type === "badge";
+              const bumpable = f.type === "session" || f.type === "badge";
+              const accent = f.type === "poke" ? "var(--blue)" : "var(--green)";
+              const emphasized = f.type === "badge" || f.type === "poke" || f.type === "friendship";
+              const avatarGlyph =
+                f.type === "poke" ? "👊" : f.type === "friendship" ? "🤝" : f.name.slice(0, 1).toUpperCase();
               return (
                 <div
                   key={f.eventId}
@@ -166,15 +191,15 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
                     gap: 12,
                     background: "var(--card)",
                     border: "1px solid var(--card-border)",
-                    borderLeft: f.type === "badge" ? "3px solid var(--green)" : "1px solid var(--card-border)",
+                    borderLeft: emphasized ? `3px solid ${accent}` : "1px solid var(--card-border)",
                     borderRadius: 16,
                     padding: 14,
                     cursor: clickable ? "pointer" : "default",
                     animation: freshIds.has(f.eventId) ? "feed-in .45s cubic-bezier(.4,0,.2,1) both" : undefined,
                   }}
                 >
-                  <div style={{ width: 40, height: 40, borderRadius: 999, background: f.own ? "rgba(48,209,88,0.18)" : "rgba(61,139,253,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, color: f.own ? "var(--green)" : "var(--blue)", flexShrink: 0 }}>
-                    {f.name.slice(0, 1).toUpperCase()}
+                  <div style={{ width: 40, height: 40, borderRadius: 999, background: f.own ? "rgba(48,209,88,0.18)" : "rgba(61,139,253,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: f.type === "poke" || f.type === "friendship" ? 18 : 15, fontWeight: 700, color: f.own ? "var(--green)" : "var(--blue)", flexShrink: 0 }}>
+                    {avatarGlyph}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em" }}>
@@ -186,27 +211,29 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
                       {clickable && <span style={{ color: "var(--green)" }}>View badges ›</span>}
                     </div>
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      bump(f);
-                    }}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 5,
-                      borderRadius: 999,
-                      padding: "8px 13px",
-                      fontSize: 14,
-                      fontWeight: 700,
-                      background: f.bumpedByMe ? "rgba(61,139,253,0.18)" : "var(--fill-resting)",
-                      color: f.bumpedByMe ? "var(--blue)" : "var(--ink-dim)",
-                      transition: "transform .15s ease, background .2s ease",
-                      fontVariantNumeric: "tabular-nums",
-                    }}
-                  >
-                    👊{f.bumpCount > 0 && <span>{f.bumpCount}</span>}
-                  </button>
+                  {bumpable && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        bump(f);
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                        borderRadius: 999,
+                        padding: "8px 13px",
+                        fontSize: 14,
+                        fontWeight: 700,
+                        background: f.bumpedByMe ? "rgba(61,139,253,0.18)" : "var(--fill-resting)",
+                        color: f.bumpedByMe ? "var(--blue)" : "var(--ink-dim)",
+                        transition: "transform .15s ease, background .2s ease",
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      👊{f.bumpCount > 0 && <span>{f.bumpCount}</span>}
+                    </button>
+                  )}
                 </div>
               );
             })
@@ -248,16 +275,39 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
                 <>
                   <SectionLabel text="Friends" />
                   <div style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 16, overflow: "hidden" }}>
-                    {friends.map((f, i) => (
-                      <div key={f.userId} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderTop: i === 0 ? "none" : "1px solid var(--hairline)" }}>
-                        <Avatar name={f.name} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 16, fontWeight: 600 }}>{f.name}</div>
-                          <div style={{ fontSize: 12.5, color: "var(--ink-faint)" }}>@{f.handle}</div>
+                    {friends.map((f, i) => {
+                      const poked = pokedIds.has(f.userId);
+                      return (
+                        <div key={f.userId} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderTop: i === 0 ? "none" : "1px solid var(--hairline)" }}>
+                          <Avatar name={f.name} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 16, fontWeight: 600 }}>{f.name}</div>
+                            <div style={{ fontSize: 12.5, color: "var(--ink-faint)" }}>@{f.handle}</div>
+                          </div>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--blue)", fontVariantNumeric: "tabular-nums" }}>🔥 {f.streak}</span>
+                          <button
+                            aria-label={poked ? `Fist-bumped ${f.name}` : `Fist-bump ${f.name}`}
+                            onClick={() => poke(f)}
+                            disabled={poked}
+                            className={poked ? undefined : "bump-nudge"}
+                            style={{
+                              width: 38,
+                              height: 38,
+                              borderRadius: 999,
+                              flexShrink: 0,
+                              fontSize: 18,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              background: poked ? "rgba(48,209,88,0.16)" : "rgba(61,139,253,0.14)",
+                              transition: "transform .15s ease, background .2s ease",
+                            }}
+                          >
+                            {poked ? "✅" : "👊"}
+                          </button>
                         </div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: "var(--blue)", fontVariantNumeric: "tabular-nums" }}>🔥 {f.streak}</span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </>
               )

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 const TABS = [
   {
@@ -89,8 +91,40 @@ const TABS = [
   },
 ];
 
-export function TabBar() {
+export function TabBar({ friendRequests = 0, userId = null }: { friendRequests?: number; userId?: string | null }) {
   const pathname = usePathname();
+  const [requests, setRequests] = useState(friendRequests);
+
+  // Keep in sync with the server count after accept/decline (router.refresh
+  // re-runs the layout and passes a fresh prop).
+  useEffect(() => setRequests(friendRequests), [friendRequests]);
+
+  // Live bump when a new incoming request lands while the app is open.
+  useEffect(() => {
+    if (!userId) return;
+    const supabase = createClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+    (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (cancelled) return;
+      await supabase.realtime.setAuth(session?.access_token ?? null);
+      channel = supabase
+        .channel("tabbar-requests")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "friend_requests", filter: `addressee_id=eq.${userId}` },
+          () => setRequests((n) => n + 1),
+        )
+        .subscribe();
+    })();
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [userId]);
 
   return (
     <nav
@@ -111,6 +145,7 @@ export function TabBar() {
     >
       {TABS.map((tab) => {
         const active = pathname.startsWith(tab.href);
+        const badge = tab.href === "/friends" ? requests : 0;
         return (
           <Link
             key={tab.href}
@@ -124,9 +159,35 @@ export function TabBar() {
               transition: "transform .12s ease",
             }}
           >
-            <svg width={25} height={25} viewBox="0 0 24 24">
-              {tab.icon(active)}
-            </svg>
+            <div style={{ position: "relative" }}>
+              <svg width={25} height={25} viewBox="0 0 24 24">
+                {tab.icon(active)}
+              </svg>
+              {badge > 0 && (
+                <span
+                  aria-label={`${badge} friend request${badge > 1 ? "s" : ""}`}
+                  style={{
+                    position: "absolute",
+                    top: -5,
+                    right: -8,
+                    minWidth: 17,
+                    height: 17,
+                    padding: "0 4px",
+                    borderRadius: 999,
+                    background: "var(--red)",
+                    color: "#fff",
+                    fontSize: 10.5,
+                    fontWeight: 800,
+                    lineHeight: "17px",
+                    textAlign: "center",
+                    fontVariantNumeric: "tabular-nums",
+                    boxShadow: "0 0 0 2px var(--bg)",
+                  }}
+                >
+                  {badge > 9 ? "9+" : badge}
+                </span>
+              )}
+            </div>
             <span
               style={{
                 fontSize: 10,
