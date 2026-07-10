@@ -1,20 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Sheet } from "@/components/Sheet";
+import { feedItemFrom, type ActivityEventRow, type FeedItem } from "@/lib/feed";
 import { respondToRequest, sendFriendRequest, toggleFistBump } from "@/app/(tabs)/friends/actions";
 
-export interface FeedItem {
-  eventId: string;
-  name: string;
-  type: "session" | "badge";
-  text: string;
-  context: string | null;
-  when: string;
-  bumpCount: number;
-  bumpedByMe: boolean;
-}
+export type { FeedItem };
 
 export interface FriendCard {
   userId: string;
@@ -24,14 +17,66 @@ export interface FriendCard {
   relation: "friend" | "incoming" | "outgoing";
 }
 
-export function FriendsScreen({ feed, people }: { feed: FeedItem[]; people: FriendCard[] }) {
+export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; people: FriendCard[]; userId: string }) {
+  const router = useRouter();
   const [segment, setSegment] = useState<"activity" | "friends">("activity");
   const [addOpen, setAddOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<{ user_id: string; handle: string; display_name: string }[]>([]);
   const [sentTo, setSentTo] = useState<Set<string>>(new Set());
-  const [bumps, setBumps] = useState(() => new Map(feed.map((f) => [f.eventId, { count: f.bumpCount, mine: f.bumpedByMe }])));
+  const [items, setItems] = useState<FeedItem[]>(feed);
+  const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
+  // Live feed (docs/TD.md § Realtime usage): new feed_entries rows animate in
+  // at the top, fist-bump counts stay in sync across clients, and an incoming
+  // friend request refreshes the server-rendered people list.
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("friends-live")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "feed_entries", filter: `recipient_id=eq.${userId}` },
+        async (payload) => {
+          const eventId = payload.new.event_id as string;
+          const createdAt = (payload.new.created_at as string) ?? new Date().toISOString();
+          if (itemsRef.current.some((i) => i.eventId === eventId)) return;
+          const { data: ev } = await supabase
+            .from("activity_events")
+            .select("id, user_id, type, payload")
+            .eq("id", eventId)
+            .single();
+          if (!ev) return;
+          const item = feedItemFrom(eventId, createdAt, ev as ActivityEventRow, userId);
+          setItems((prev) => (prev.some((i) => i.eventId === eventId) ? prev : [item, ...prev]));
+          setFreshIds((prev) => new Set(prev).add(eventId));
+        },
+      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "fist_bumps" }, (payload) => {
+        const eventId = payload.new.event_id as string;
+        if ((payload.new.from_user_id as string) === userId) return; // own tap is optimistic
+        setItems((prev) => prev.map((i) => (i.eventId === eventId ? { ...i, bumpCount: i.bumpCount + 1 } : i)));
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "fist_bumps" }, (payload) => {
+        const eventId = payload.old.event_id as string;
+        if ((payload.old.from_user_id as string) === userId) return;
+        setItems((prev) =>
+          prev.map((i) => (i.eventId === eventId ? { ...i, bumpCount: Math.max(0, i.bumpCount - 1) } : i)),
+        );
+      })
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "friend_requests", filter: `addressee_id=eq.${userId}` },
+        () => router.refresh(),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, router]);
 
   const friends = people.filter((p) => p.relation === "friend");
   const incoming = people.filter((p) => p.relation === "incoming");
@@ -48,10 +93,13 @@ export function FriendsScreen({ feed, people }: { feed: FeedItem[]; people: Frie
   }
 
   function bump(item: FeedItem) {
-    const cur = bumps.get(item.eventId) ?? { count: 0, mine: false };
-    const next = { count: cur.count + (cur.mine ? -1 : 1), mine: !cur.mine };
-    setBumps(new Map(bumps).set(item.eventId, next));
-    startTransition(() => toggleFistBump(item.eventId, next.mine));
+    const mine = !item.bumpedByMe;
+    setItems((prev) =>
+      prev.map((i) =>
+        i.eventId === item.eventId ? { ...i, bumpedByMe: mine, bumpCount: Math.max(0, i.bumpCount + (mine ? 1 : -1)) } : i,
+      ),
+    );
+    startTransition(() => toggleFistBump(item.eventId, mine));
   }
 
   return (
@@ -102,14 +150,16 @@ export function FriendsScreen({ feed, people }: { feed: FeedItem[]; people: Frie
 
       <div style={{ padding: "8px 16px 0", display: "flex", flexDirection: "column", gap: 10 }}>
         {segment === "activity" ? (
-          feed.length === 0 ? (
+          items.length === 0 ? (
             <EmptyState onAdd={() => setAddOpen(true)} />
           ) : (
-            feed.map((f) => {
-              const b = bumps.get(f.eventId) ?? { count: f.bumpCount, mine: f.bumpedByMe };
+            items.map((f) => {
+              const clickable = f.type === "badge";
               return (
                 <div
                   key={f.eventId}
+                  onClick={clickable ? () => router.push("/badges") : undefined}
+                  role={clickable ? "link" : undefined}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -119,9 +169,11 @@ export function FriendsScreen({ feed, people }: { feed: FeedItem[]; people: Frie
                     borderLeft: f.type === "badge" ? "3px solid var(--green)" : "1px solid var(--card-border)",
                     borderRadius: 16,
                     padding: 14,
+                    cursor: clickable ? "pointer" : "default",
+                    animation: freshIds.has(f.eventId) ? "feed-in .45s cubic-bezier(.4,0,.2,1) both" : undefined,
                   }}
                 >
-                  <div style={{ width: 40, height: 40, borderRadius: 999, background: "rgba(61,139,253,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, color: "var(--blue)", flexShrink: 0 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 999, background: f.own ? "rgba(48,209,88,0.18)" : "rgba(61,139,253,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, color: f.own ? "var(--green)" : "var(--blue)", flexShrink: 0 }}>
                     {f.name.slice(0, 1).toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -131,10 +183,14 @@ export function FriendsScreen({ feed, people }: { feed: FeedItem[]; people: Frie
                     <div style={{ display: "flex", gap: 8, marginTop: 3, fontSize: 12.5, fontWeight: 500, color: "var(--ink-faint)" }}>
                       {f.context && <span>{f.context}</span>}
                       <span>{f.when}</span>
+                      {clickable && <span style={{ color: "var(--green)" }}>View badges ›</span>}
                     </div>
                   </div>
                   <button
-                    onClick={() => bump(f)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      bump(f);
+                    }}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -143,13 +199,13 @@ export function FriendsScreen({ feed, people }: { feed: FeedItem[]; people: Frie
                       padding: "8px 13px",
                       fontSize: 14,
                       fontWeight: 700,
-                      background: b.mine ? "rgba(61,139,253,0.18)" : "var(--fill-resting)",
-                      color: b.mine ? "var(--blue)" : "var(--ink-dim)",
+                      background: f.bumpedByMe ? "rgba(61,139,253,0.18)" : "var(--fill-resting)",
+                      color: f.bumpedByMe ? "var(--blue)" : "var(--ink-dim)",
                       transition: "transform .15s ease, background .2s ease",
                       fontVariantNumeric: "tabular-nums",
                     }}
                   >
-                    👊{b.count > 0 && <span>{b.count}</span>}
+                    👊{f.bumpCount > 0 && <span>{f.bumpCount}</span>}
                   </button>
                 </div>
               );

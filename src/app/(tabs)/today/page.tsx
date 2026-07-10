@@ -29,7 +29,7 @@ export default async function TodayPage() {
         .eq("status", "complete"),
       supabase
         .from("feed_entries")
-        .select("event_id, created_at, activity_events(type, payload, created_at)")
+        .select("event_id, created_at, activity_events(user_id, type, payload, created_at)")
         .eq("recipient_id", user.id)
         .order("created_at", { ascending: false })
         .limit(3),
@@ -92,13 +92,14 @@ export default async function TodayPage() {
       todayIdx={todayIdx}
       badgeTeaser={next ? { name: next.name, toGo: next.at - (totalSessions ?? 0), frac: (totalSessions ?? 0) / next.at } : null}
       feed={(feed ?? []).map((f) => {
-        const ev = f.activity_events as unknown as { type: string; payload: Record<string, string | number> };
+        const ev = f.activity_events as unknown as { user_id: string; type: string; payload: Record<string, string | number> };
+        const own = ev?.user_id === user.id;
         return {
-          name: String(ev?.payload?.actor_name ?? "A friend"),
+          name: own ? "You" : String(ev?.payload?.actor_name ?? "A friend"),
           text:
             ev?.type === "badge_earned"
-              ? `earned ${ev.payload?.badge_name ?? "a badge"}`
-              : `completed ${ev?.payload?.session_title ?? "a workout"}`,
+              ? `${own ? "earned" : "has earned"} ${ev.payload?.badge_name ?? "a badge"}`
+              : `${own ? "finished" : "has finished"} ${ev?.payload?.session_title ?? "a workout"}`,
           when: new Date(f.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
         };
       })}

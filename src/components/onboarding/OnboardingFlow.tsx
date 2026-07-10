@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { StatSlider } from "@/components/StatSlider";
 import { completeOnboarding } from "@/app/onboarding/actions";
 import { generateWeek, type Equipment, type Goal } from "@/lib/plan/generate";
 
@@ -107,11 +108,9 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
 
   // S2
   const [metric, setMetric] = useState(initialProfile?.unitPref !== "imperial");
-  const [age, setAge] = useState(initialProfile?.age ? String(initialProfile.age) : "28");
+  const [age, setAge] = useState(initialProfile?.age ?? 28);
   const [heightCm, setHeightCm] = useState(initialProfile?.heightCm ?? 178);
   const [weightKg, setWeightKg] = useState(initialProfile?.weightKg ?? 82);
-  const [heightStr, setHeightStr] = useState(String(Math.round(initialProfile?.heightCm ?? 178)));
-  const [weightStr, setWeightStr] = useState(String(Math.round(initialProfile?.weightKg ?? 82)));
 
   // S3
   const [goal, setGoal] = useState<Goal | null>(initialProfile?.goal ?? null);
@@ -209,34 +208,22 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
   }
 
   function toImperial() {
-    const totalInches = Math.round(heightCm / 2.54);
     setMetric(false);
-    setHeightStr(`${Math.floor(totalInches / 12)}'${totalInches % 12}"`);
-    setWeightStr(String(Math.round(weightKg * 2.2046)));
     setTarget(String(Math.round((parseFloat(target) || 75) * 2.2046)));
   }
   function toMetric() {
     setMetric(true);
-    setHeightStr(String(Math.round(heightCm)));
-    setWeightStr(String(Math.round(weightKg)));
     setTarget(String(Math.round((parseFloat(target) || 165) / 2.2046)));
   }
 
-  function onHeightChange(v: string) {
-    setHeightStr(v);
-    if (metric) {
-      const n = parseFloat(v);
-      if (!isNaN(n)) setHeightCm(n);
-    } else {
-      const m = v.match(/(\d+)[^\d]*(\d*)/);
-      if (m) setHeightCm((parseInt(m[1]) * 12 + (parseInt(m[2]) || 0)) * 2.54);
-    }
-  }
-  function onWeightChange(v: string) {
-    setWeightStr(v);
-    const n = parseFloat(v);
-    if (!isNaN(n)) setWeightKg(metric ? n : n / 2.2046);
-  }
+  // Slider readouts — heightCm/weightKg stay canonical metric, imperial is
+  // purely a display format.
+  const fmtHeight = (cm: number) => {
+    if (metric) return `${Math.round(cm)} cm`;
+    const inches = Math.round(cm / 2.54);
+    return `${Math.floor(inches / 12)}'${inches % 12}"`;
+  };
+  const fmtWeight = (kg: number) => (metric ? `${Math.round(kg * 2) / 2} kg` : `${Math.round(kg * 2.2046)} lb`);
 
   // Surface auth errors Supabase returns either in the URL hash (implicit
   // flow, e.g. #error=access_denied&error_code=otp_expired) or as query
@@ -333,7 +320,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
       await completeOnboarding({
         handle,
         displayName: name,
-        age: age ? parseInt(age, 10) : null,
+        age,
         heightCm: Math.round(heightCm),
         weightKg: Math.round(weightKg * 10) / 10,
         unitPref: metric ? "metric" : "imperial",
@@ -670,26 +657,11 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
         <div style={subtitleStyle}>Used to estimate training loads.</div>
 
         <div style={cardStyle}>
-          <StatRow label="Age">
-            <input
-              type="text"
-              inputMode="numeric"
-              value={age}
-              onChange={(e) => setAge(e.target.value.replace(/[^\d]/g, ""))}
-              style={statInputStyle}
-            />
-            <span style={statUnitStyle}>yrs</span>
-          </StatRow>
+          <StatSlider label="Age" value={age} min={13} max={90} format={(v) => `${v} yrs`} onChange={setAge} />
           <Hairline />
-          <StatRow label="Height">
-            <input type="text" inputMode="decimal" value={heightStr} onChange={(e) => onHeightChange(e.target.value)} style={statInputStyle} />
-            <span style={statUnitStyle}>{metric ? "cm" : "ft-in"}</span>
-          </StatRow>
+          <StatSlider label="Height" value={heightCm} min={120} max={220} format={fmtHeight} onChange={setHeightCm} />
           <Hairline />
-          <StatRow label="Weight">
-            <input type="text" inputMode="decimal" value={weightStr} onChange={(e) => onWeightChange(e.target.value)} style={statInputStyle} />
-            <span style={statUnitStyle}>{metric ? "kg" : "lb"}</span>
-          </StatRow>
+          <StatSlider label="Weight" value={weightKg} min={35} max={200} step={0.5} format={fmtWeight} onChange={setWeightKg} />
         </div>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>

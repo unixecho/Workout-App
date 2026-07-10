@@ -259,6 +259,57 @@ const PATTERNS: Record<string, Pattern> = {
     dur: "1.6s",
     hold: false,
   },
+
+  // ---- Warm-up category pass (2026-07) ------------------------------------
+  rower: {
+    // seated erg on a rail: catch (knees bent, arms long) <-> finish (legs
+    // long, lean back, handle to chest)
+    a: { head: [50, 44], bones: ["20,88 100,88", "52,52 64,78", "64,78 80,62 92,74", "92,74 96,80", "54,56 86,58"] },
+    b: { head: [42, 50], bones: ["20,88 100,88", "44,58 56,78", "56,78 74,76 92,74", "92,74 96,80", "46,62 70,60"] },
+    dur: "1.6s",
+    hold: false,
+  },
+  elliptical: {
+    // standing glide: feet never leave the pedals, opposite arm drives
+    a: { head: [60, 20], bones: ["30,92 94,92", "60,28 60,56", "60,56 72,72 76,86", "60,56 50,72 46,90", "60,34 74,40"] },
+    b: { head: [60, 22], bones: ["30,92 94,92", "60,30 60,58", "60,58 52,74 46,88", "60,58 70,74 76,92", "60,36 46,42"] },
+    dur: "1.4s",
+    hold: false,
+  },
+  legswing: {
+    // holding a static pole, one leg swings front <-> back
+    a: { head: [58, 20], bones: ["88,30 88,92", "58,28 58,56", "58,56 58,74 58,92", "58,56 44,68 40,80", "58,34 86,38"] },
+    b: { head: [58, 20], bones: ["88,30 88,92", "58,28 58,56", "58,56 58,74 58,92", "58,56 70,70 76,82", "58,34 86,38"] },
+    dur: "1.5s",
+    hold: false,
+  },
+  torsotwist: {
+    // front view: loose arms sweep across as the torso rotates
+    a: { head: [62, 18], bones: ["62,26 62,54", "62,54 54,74 52,92", "62,54 70,74 72,92", "62,32 40,34", "62,32 52,42"] },
+    b: { head: [62, 18], bones: ["62,26 62,54", "62,54 54,74 52,92", "62,54 70,74 72,92", "62,32 72,42", "62,32 84,34"] },
+    dur: "1.5s",
+    hold: false,
+  },
+  shoulderroll: {
+    // front view: shoulders (arm roots) ride up and back down
+    a: { head: [62, 18], bones: ["62,26 62,56", "62,56 54,74 52,92", "62,56 70,74 72,92", "58,34 54,54", "66,34 70,54"] },
+    b: { head: [62, 16], bones: ["62,24 62,56", "62,56 54,74 52,92", "62,56 70,74 72,92", "58,29 53,49", "66,29 71,49"] },
+    dur: "2s",
+    hold: false,
+  },
+  buttkick: {
+    // jog in place, heel kicks toward the glute
+    a: { head: [62, 18], bones: ["62,26 62,54", "62,54 60,74 58,92", "62,54 72,64 66,74", "62,32 74,40", "62,32 50,40"] },
+    b: { head: [62, 18], bones: ["62,26 62,54", "62,54 72,66 64,76", "62,54 62,76 60,92", "62,32 50,40", "62,32 74,40"] },
+    dur: "0.9s",
+    hold: false,
+  },
+  deadhang: {
+    // passive hang from the bar: slow shoulder-stretch breathing
+    a: { head: [62, 26], bones: ["34,10 90,10", "62,34 62,58", "62,58 61,74 60,88", "62,36 52,23 52,10", "62,36 72,23 72,10"] },
+    b: { head: [62, 29], bones: ["34,10 90,10", "62,37 62,61", "62,61 61,77 60,91", "62,39 52,25 52,10", "62,39 72,25 72,10"] },
+    dur: "4s",
+  },
 };
 
 const KEYTIMES_HOLD = "0;0.4;0.6;1";

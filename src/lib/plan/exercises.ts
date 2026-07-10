@@ -47,12 +47,35 @@ const TIMED_SLUGS = new Set([
   "arm-circles", "cat-cow", "hip-circles", "childs-pose",
   "treadmill-walk", "bike-easy", "jump-rope", "high-knees",
   "wall-sit", "side-plank",
+  "rower-easy", "elliptical-easy", "leg-swings", "torso-twists",
+  "shoulder-rolls", "butt-kicks", "dead-hang",
 ]);
 
 // Cardio warm-up first (raises heart rate), best-equipped option wins.
-const CARDIO_WARMUP_SLUGS = ["treadmill-walk", "bike-easy", "jump-rope", "high-knees", "jumping-jacks", "light-march"];
-const WARMUP_SLUGS = ["light-march", "arm-circles", "cat-cow", "hip-circles"];
+const CARDIO_WARMUP_SLUGS = [
+  "treadmill-walk", "rower-easy", "bike-easy", "elliptical-easy",
+  "jump-rope", "high-knees", "butt-kicks", "jumping-jacks", "light-march",
+];
 const COOLDOWN_SLUGS = ["childs-pose", "cat-cow", "hip-circles"];
+
+// Mobility warm-up slot: prefer a drill that matches the day's focus —
+// pull days start hanging from the bar (park/gym), upper days open the
+// shoulders, lower days swing the hips.
+const UPPER_MUSCLES = ["Chest", "Back", "Delts", "Biceps", "Triceps", "Arms"];
+const LOWER_MUSCLES = ["Quads", "Glutes", "Hamstrings", "Calves", "Hip"];
+
+function mobilityWarmupOrder(focusMuscles: string[]): string[] {
+  if (focusMuscles.includes("Back")) {
+    return ["dead-hang", "arm-circles", "shoulder-rolls", "torso-twists", "cat-cow", "light-march"];
+  }
+  if (focusMuscles.some((m) => UPPER_MUSCLES.includes(m))) {
+    return ["arm-circles", "shoulder-rolls", "torso-twists", "cat-cow", "light-march"];
+  }
+  if (focusMuscles.some((m) => LOWER_MUSCLES.includes(m))) {
+    return ["leg-swings", "hip-circles", "torso-twists", "cat-cow", "light-march"];
+  }
+  return ["torso-twists", "arm-circles", "leg-swings", "hip-circles", "cat-cow", "light-march"];
+}
 
 /** True when this exercise must not be given to a user with these limitations. */
 export function conflictsHard(ex: ExerciseRow, limitations: string[]): boolean {
@@ -126,7 +149,9 @@ export function selectSessionExercises(
   if (cardioWarmup) {
     push(cardioWarmup, { is_warmup: true, sets: 1, dose_type: "time", seconds: 180, reps_min: null, reps_max: null, rest_seconds: 0 });
   }
-  const warmup = WARMUP_SLUGS.map((s) => bySlug.get(s)).find((ex) => ex && ex.slug !== cardioWarmup?.slug);
+  const warmup = mobilityWarmupOrder(focusMuscles)
+    .map((s) => bySlug.get(s))
+    .find((ex) => ex && ex.slug !== cardioWarmup?.slug);
   if (warmup) {
     push(warmup, { is_warmup: true, sets: 1, dose_type: "time", seconds: 60, reps_min: null, reps_max: null, rest_seconds: 0 });
   }

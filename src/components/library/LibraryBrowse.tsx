@@ -17,9 +17,10 @@ export interface LibraryItem {
   unsafe: boolean;
 }
 
-const FILTERS = ["All", "Legs", "Push", "Pull", "Core", "Cardio", "Safe for me"];
+const FILTERS = ["All", "Warm-up", "Legs", "Push", "Pull", "Core", "Cardio", "Safe for me"];
 
 const FILTER_MUSCLES: Record<string, string[]> = {
+  "Warm-up": ["Warmup"],
   Legs: ["Quads", "Glutes", "Hamstrings", "Calves"],
   Push: ["Chest", "Triceps", "Delts"],
   Pull: ["Back", "Biceps"],

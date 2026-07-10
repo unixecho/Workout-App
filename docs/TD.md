@@ -72,7 +72,9 @@ types get finalized when the schema is written.
   **snapshotted from `profiles.activity_visibility` at insert time** — going
   private only affects future events, per FD §11 "not retroactive").
 - **`feed_entries`** — fan-out table: `recipient_id`, `event_id`, written by
-  a trigger on `activity_events` insert (one row per friend). Exists purely
+  a trigger on `activity_events` insert (one row per friend **plus one for
+  the actor** — your own activity shows in your feed as "You finished …",
+  and the self row is written even when visibility is private). Exists purely
   so Realtime subscriptions and feed queries can filter on a single
   `recipient_id = me` equality instead of an `IN (friend_ids)` list.
 - **`fist_bumps`** — `event_id`, `from_user_id`, unique on

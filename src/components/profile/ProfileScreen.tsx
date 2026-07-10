@@ -13,6 +13,7 @@ import {
   updateVisibility,
 } from "@/app/(tabs)/profile/actions";
 import { regenerateWeek } from "@/app/(tabs)/plan/actions";
+import { StatSlider } from "@/components/StatSlider";
 
 const WEEKDAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 const LIMITATION_TAGS = ["Knee", "Shoulder", "Back", "Wrist", "Ankle", "Hip", "Elbow", "Neck"];
@@ -55,9 +56,9 @@ export function ProfileScreen(p: Props) {
   const [pending, startTransition] = useTransition();
 
   // Edit drafts (initialized when a sheet opens)
-  const [age, setAge] = useState(p.body.age ? String(p.body.age) : "");
-  const [height, setHeight] = useState(p.body.heightCm ? String(p.body.heightCm) : "");
-  const [weight, setWeight] = useState(p.body.weightKg ? String(p.body.weightKg) : "");
+  const [age, setAge] = useState(p.body.age ?? 28);
+  const [height, setHeight] = useState(p.body.heightCm ?? 178);
+  const [weight, setWeight] = useState(p.body.weightKg ?? 82);
   const [goal, setGoal] = useState(p.goal);
   const [days, setDays] = useState<boolean[]>(() => {
     const w = [false, false, false, false, false, false, false];
@@ -80,12 +81,23 @@ export function ProfileScreen(p: Props) {
     router.refresh();
   };
 
-  /** Save a training-affecting change, then offer regeneration (FD §10). */
+  /**
+   * Save a training-affecting change (FD §10). Availability regenerates the
+   * remaining week automatically — a plan with sessions on days you can't
+   * train is simply wrong, so there's nothing to ask. Other fields (goal,
+   * equipment, limitations) still offer regeneration as a choice.
+   */
   const saveTraining = (fields: Parameters<typeof updateTraining>[0]) =>
     startTransition(async () => {
       await updateTraining(fields);
-      setSheet(null);
-      setRegenPrompt(true);
+      if (fields.weekdayAvailability !== undefined) {
+        await regenerateWeek();
+        router.refresh();
+        setSheet(null);
+      } else {
+        setSheet(null);
+        setRegenPrompt(true);
+      }
     });
 
   return (
@@ -128,9 +140,9 @@ export function ProfileScreen(p: Props) {
             label="Body stats"
             value={`${p.body.age ?? "—"} yrs · ${p.body.heightCm ?? "—"} cm · ${p.body.weightKg ?? "—"} kg`}
             onClick={() => {
-              setAge(p.body.age ? String(p.body.age) : "");
-              setHeight(p.body.heightCm ? String(p.body.heightCm) : "");
-              setWeight(p.body.weightKg ? String(p.body.weightKg) : "");
+              setAge(p.body.age ?? 28);
+              setHeight(p.body.heightCm ?? 178);
+              setWeight(p.body.weightKg ?? 82);
               setSheet("body");
             }}
           />
@@ -186,14 +198,33 @@ export function ProfileScreen(p: Props) {
 
       {/* ===== Body stats sheet ===== */}
       <Sheet open={sheet === "body"} onClose={() => setSheet(null)} title="Body stats">
-        <FieldRow label="Age" suffix="yrs" value={age} onChange={(v) => setAge(v.replace(/[^\d]/g, ""))} />
-        <FieldRow label="Height" suffix="cm" value={height} onChange={(v) => setHeight(v.replace(/[^\d.]/g, ""))} />
-        <FieldRow label="Weight" suffix="kg" value={weight} onChange={(v) => setWeight(v.replace(/[^\d.]/g, ""))} />
+        <StatSlider label="Age" value={age} min={13} max={90} format={(v) => `${v} yrs`} onChange={setAge} />
+        <StatSlider
+          label="Height"
+          value={height}
+          min={120}
+          max={220}
+          format={(v) => {
+            if (units === "metric") return `${Math.round(v)} cm`;
+            const inches = Math.round(v / 2.54);
+            return `${Math.floor(inches / 12)}'${inches % 12}"`;
+          }}
+          onChange={setHeight}
+        />
+        <StatSlider
+          label="Weight"
+          value={weight}
+          min={35}
+          max={200}
+          step={0.5}
+          format={(v) => (units === "metric" ? `${Math.round(v * 2) / 2} kg` : `${Math.round(v * 2.2046)} lb`)}
+          onChange={setWeight}
+        />
         <SaveButton
           pending={pending}
           onClick={() =>
             startTransition(async () => {
-              await updateBodyStats(age ? parseInt(age, 10) : null, height ? parseFloat(height) : null, weight ? parseFloat(weight) : null);
+              await updateBodyStats(age, Math.round(height), Math.round(weight * 10) / 10);
               setSheet(null);
             })
           }
@@ -431,21 +462,6 @@ function ToggleRow({ label, on, onToggle }: { label: string; on: boolean; onTogg
       >
         <span style={{ position: "absolute", top: 3, left: on ? 23 : 3, width: 24, height: 24, borderRadius: 999, background: "#fff", transition: "left .25s cubic-bezier(.4,0,.2,1)", boxShadow: "0 2px 6px rgba(0,0,0,0.35)" }} />
       </button>
-    </div>
-  );
-}
-
-function FieldRow({ label, suffix, value, onChange }: { label: string; suffix: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--fill-resting)", borderRadius: 12, padding: "12px 16px", marginBottom: 10 }}>
-      <span style={{ flex: 1, fontSize: 15, fontWeight: 600 }}>{label}</span>
-      <input
-        inputMode="decimal"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        style={{ width: 90, background: "transparent", border: "none", outline: "none", textAlign: "right", color: "var(--ink)", fontSize: 17, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}
-      />
-      <span style={{ width: 28, fontSize: 13, fontWeight: 600, color: "var(--ink-faint)" }}>{suffix}</span>
     </div>
   );
 }

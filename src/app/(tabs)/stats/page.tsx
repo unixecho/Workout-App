@@ -64,7 +64,7 @@ export default async function StatsPage() {
     const muscles = (l.exercises as unknown as { muscle_groups: string[] })?.muscle_groups ?? [];
     const sets = Array.isArray(l.sets_completed) ? l.sets_completed.length : 1;
     for (const m of muscles) {
-      if (m === "Mobility") continue;
+      if (m === "Mobility" || m === "Warmup") continue;
       balance[m] = (balance[m] ?? 0) + sets;
     }
   }
