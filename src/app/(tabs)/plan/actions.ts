@@ -6,13 +6,29 @@ import { generateWeek, type Equipment, type Goal } from "@/lib/plan/generate";
 import { selectSessionExercises, type ExerciseRow } from "@/lib/plan/exercises";
 import { mondayIndex } from "@/lib/data";
 
+/** Monday 00:00 (local) for the week containing `d`. */
+function startOfWeek(d: Date): Date {
+  const start = new Date(d);
+  start.setDate(start.getDate() - mondayIndex(d));
+  start.setHours(0, 0, 0, 0);
+  return start;
+}
+
 /**
- * Regenerate the remaining days of the active plan (FD §4): only days from
- * today onward that have no completed log are touched — plan_day rows are
- * updated in place so history links stay intact, and their exercises are
- * re-selected from scratch.
+ * Regenerate the active plan (FD §4). `plan_days` is a single recurring
+ * weekly template — the same 7 rows are projected onto every week (and onto
+ * every month in the Plan tab's Month view), not one row per calendar date.
+ *
+ * `full = false` (the Plan tab's manual "Regenerate week" button): only days
+ * from today onward are touched, so a reshuffle mid-week doesn't disturb
+ * days already behind you.
+ *
+ * `full = true` (an availability change): every day-of-week slot is
+ * regenerated so the whole template — and therefore Week *and* Month view —
+ * matches the new availability immediately, not just the remainder of this
+ * week. A day already logged complete *this* week is still protected.
  */
-export async function regenerateWeek() {
+export async function regenerateWeek(full = false) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -42,11 +58,15 @@ export async function regenerateWeek() {
     .eq("plan_id", plan.id);
   if (!days) throw new Error("No plan days");
 
+  // Scoped to THIS week only — plan_day_id is a recurring weekly slot, not a
+  // specific date, so an all-time check would permanently freeze any slot
+  // ever completed in a past week and never let it regenerate again.
   const { data: doneLogs } = await supabase
     .from("workout_logs")
     .select("plan_day_id")
     .eq("user_id", user.id)
-    .eq("status", "complete");
+    .eq("status", "complete")
+    .gte("completed_at", startOfWeek(new Date()).toISOString());
   const completedDayIds = new Set((doneLogs ?? []).map((l) => l.plan_day_id));
 
   const todayIdx = mondayIndex(new Date());
@@ -60,7 +80,7 @@ export async function regenerateWeek() {
     .select("id, slug, name, muscle_groups, equipment, difficulty, adaptations");
 
   for (const day of days) {
-    if (day.day_of_week < todayIdx) continue;
+    if (!full && day.day_of_week < todayIdx) continue;
     if (completedDayIds.has(day.id)) continue;
     const gen = fresh[day.day_of_week];
 

@@ -1,5 +1,43 @@
 # TODO
 
+## Done (2026-07-10, third round — owner bug reports)
+
+- [x] **Real root cause of "activity doesn't update" found**: `FriendsScreen`
+      seeded `items` via `useState(feed)`, which only reads the prop on
+      initial mount — a subsequent `router.refresh()` (from realtime or the
+      new visibility fallback) fetched fresh data server-side but never
+      applied it to screen. Only a full remount (navigating away and back)
+      ever showed it. Fixed with `useEffect(() => setItems(feed), [feed])`.
+      Also hardened both realtime subscriptions (Friends feed, TabBar badge)
+      to use `onAuthStateChange` instead of a one-shot `getSession()` call
+      (avoids a hydration race that connects as anon), and added a
+      visibility/focus-triggered refresh as a fallback for mobile browsers
+      that drop websockets when backgrounded.
+- [x] **NEXT_REDIRECT flash after onboarding fixed**: `handleAcceptPlan`'s
+      client-side try/catch was catching Next's internal redirect signal
+      and briefly rendering it as a save error before navigation completed.
+      Now detects and rethrows redirect errors.
+- [x] **Magic link removed from onboarding** — Google-only now (owner was
+      rate-limited; Google already worked fine). Verified in preview.
+- [x] **Friends segment badge**: a small red count now shows directly on
+      the "Friends" segment toggle (not just the tab bar) so a pending
+      request is discoverable from the default Activity view.
+- [x] **Availability unsaved-changes guard**: dismissing the training-days
+      sheet with unsaved edits now shows a Discard/Keep-editing confirm
+      instead of silently losing the change. Also fixed a latent bug where
+      the Availability row kept showing a stale draft count after a
+      cancelled edit.
+- [x] **regenerateWeek correctness fix**: `plan_days` is a single recurring
+      weekly template shared by Week *and* Month view (not per-date rows),
+      but the "already completed" guard checked ALL-TIME logs, permanently
+      freezing any day-of-week slot ever completed in a past week. Scoped
+      the check to the current week and added a `full=true` mode (used on
+      availability save) that regenerates every slot instead of only
+      today-onward, so an availability change now fully and correctly
+      propagates through both Week and Month.
+- [x] **Return a fist bump from the feed**: a "bump back" button now
+      appears on incoming poke entries in the activity feed.
+
 ## Done (2026-07-10, follow-up round)
 
 - [x] **Fixed realtime feed not updating**: the browser Supabase client's

@@ -100,28 +100,33 @@ export function TabBar({ friendRequests = 0, userId = null }: { friendRequests?:
   useEffect(() => setRequests(friendRequests), [friendRequests]);
 
   // Live bump when a new incoming request lands while the app is open.
+  // onAuthStateChange (not a one-shot getSession()) keeps the realtime auth
+  // token correct regardless of when this effect happens to run relative to
+  // session hydration — a one-shot read can race and connect as anon, which
+  // RLS then silently filters to nothing.
   useEffect(() => {
     if (!userId) return;
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
-    let cancelled = false;
-    (async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (cancelled) return;
-      await supabase.realtime.setAuth(session?.access_token ?? null);
-      channel = supabase
-        .channel("tabbar-requests")
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "friend_requests", filter: `addressee_id=eq.${userId}` },
-          () => setRequests((n) => n + 1),
-        )
-        .subscribe();
-    })();
+
+    const {
+      data: { subscription: authSub },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      supabase.realtime.setAuth(session?.access_token ?? null);
+      if (!channel) {
+        channel = supabase
+          .channel("tabbar-requests")
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "friend_requests", filter: `addressee_id=eq.${userId}` },
+            () => setRequests((n) => n + 1),
+          )
+          .subscribe();
+      }
+    });
+
     return () => {
-      cancelled = true;
+      authSub.unsubscribe();
       if (channel) supabase.removeChannel(channel);
     };
   }, [userId]);

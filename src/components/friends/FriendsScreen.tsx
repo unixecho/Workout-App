@@ -31,63 +31,91 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
   const itemsRef = useRef(items);
   itemsRef.current = items;
 
+  // useState(feed) only seeds the INITIAL value — React doesn't re-derive it
+  // when a new `feed` prop arrives from router.refresh() (a well-known
+  // gotcha). Without this, in-place refreshes (the visibility/focus fallback
+  // below, or the friend_requests handler's router.refresh()) fetch fresh
+  // data server-side but never actually show it until the component fully
+  // remounts, e.g. by navigating away and back.
+  useEffect(() => setItems(feed), [feed]);
+
   // Live feed (docs/TD.md § Realtime usage): new feed_entries rows animate in
   // at the top, fist-bump counts stay in sync across clients, and an incoming
   // friend request refreshes the server-rendered people list.
   //
   // The realtime socket must carry the user's access token or it connects as
-  // `anon` and RLS filters out every row — so set auth before subscribing.
+  // `anon` and RLS filters out every row. onAuthStateChange (rather than a
+  // one-shot getSession() at mount) keeps that token correct even if this
+  // effect runs before the session has fully hydrated, and re-arms it on
+  // refresh. Mobile browsers also silently drop websockets when a tab is
+  // backgrounded and don't always resume delivery on foreground, so a
+  // visibility/focus refresh is a deliberate belt-and-suspenders fallback —
+  // without it, activity only appeared to update after navigating away and
+  // back (which forces a fresh server fetch).
   useEffect(() => {
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
-    let cancelled = false;
-    (async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (cancelled) return;
-      await supabase.realtime.setAuth(session?.access_token ?? null);
-      channel = supabase
-        .channel("friends-live")
-        .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "feed_entries", filter: `recipient_id=eq.${userId}` },
-        async (payload) => {
-          const eventId = payload.new.event_id as string;
-          const createdAt = (payload.new.created_at as string) ?? new Date().toISOString();
-          if (itemsRef.current.some((i) => i.eventId === eventId)) return;
-          const { data: ev } = await supabase
-            .from("activity_events")
-            .select("id, user_id, type, payload")
-            .eq("id", eventId)
-            .single();
-          if (!ev) return;
-          const item = feedItemFrom(eventId, createdAt, ev as ActivityEventRow, userId);
-          setItems((prev) => (prev.some((i) => i.eventId === eventId) ? prev : [item, ...prev]));
-          setFreshIds((prev) => new Set(prev).add(eventId));
-        },
-      )
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "fist_bumps" }, (payload) => {
-        const eventId = payload.new.event_id as string;
-        if ((payload.new.from_user_id as string) === userId) return; // own tap is optimistic
-        setItems((prev) => prev.map((i) => (i.eventId === eventId ? { ...i, bumpCount: i.bumpCount + 1 } : i)));
-      })
-      .on("postgres_changes", { event: "DELETE", schema: "public", table: "fist_bumps" }, (payload) => {
-        const eventId = payload.old.event_id as string;
-        if ((payload.old.from_user_id as string) === userId) return;
-        setItems((prev) =>
-          prev.map((i) => (i.eventId === eventId ? { ...i, bumpCount: Math.max(0, i.bumpCount - 1) } : i)),
-        );
-      })
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "friend_requests", filter: `addressee_id=eq.${userId}` },
-          () => router.refresh(),
-        )
-        .subscribe();
-    })();
+
+    const {
+      data: { subscription: authSub },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      supabase.realtime.setAuth(session?.access_token ?? null);
+      if (!channel) {
+        channel = supabase
+          .channel("friends-live")
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "feed_entries", filter: `recipient_id=eq.${userId}` },
+            async (payload) => {
+              const eventId = payload.new.event_id as string;
+              const createdAt = (payload.new.created_at as string) ?? new Date().toISOString();
+              if (itemsRef.current.some((i) => i.eventId === eventId)) return;
+              const { data: ev } = await supabase
+                .from("activity_events")
+                .select("id, user_id, type, payload")
+                .eq("id", eventId)
+                .single();
+              if (!ev) return;
+              const item = feedItemFrom(eventId, createdAt, ev as ActivityEventRow, userId);
+              setItems((prev) => (prev.some((i) => i.eventId === eventId) ? prev : [item, ...prev]));
+              setFreshIds((prev) => new Set(prev).add(eventId));
+            },
+          )
+          .on("postgres_changes", { event: "INSERT", schema: "public", table: "fist_bumps" }, (payload) => {
+            const eventId = payload.new.event_id as string;
+            if ((payload.new.from_user_id as string) === userId) return; // own tap is optimistic
+            setItems((prev) => prev.map((i) => (i.eventId === eventId ? { ...i, bumpCount: i.bumpCount + 1 } : i)));
+          })
+          .on("postgres_changes", { event: "DELETE", schema: "public", table: "fist_bumps" }, (payload) => {
+            const eventId = payload.old.event_id as string;
+            if ((payload.old.from_user_id as string) === userId) return;
+            setItems((prev) =>
+              prev.map((i) => (i.eventId === eventId ? { ...i, bumpCount: Math.max(0, i.bumpCount - 1) } : i)),
+            );
+          })
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "friend_requests", filter: `addressee_id=eq.${userId}` },
+            () => router.refresh(),
+          )
+          .subscribe((status) => {
+            if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+              console.error(`[friends-live] realtime subscription ${status.toLowerCase()}`);
+            }
+          });
+      }
+    });
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") router.refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+
     return () => {
-      cancelled = true;
+      authSub.unsubscribe();
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
       if (channel) supabase.removeChannel(channel);
     };
   }, [userId, router]);
@@ -116,10 +144,10 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
     startTransition(() => toggleFistBump(item.eventId, mine));
   }
 
-  function poke(friend: FriendCard) {
-    if (pokedIds.has(friend.userId)) return;
-    setPokedIds((prev) => new Set(prev).add(friend.userId));
-    startTransition(() => pokeFriend(friend.userId));
+  function poke(targetUserId: string) {
+    if (pokedIds.has(targetUserId)) return;
+    setPokedIds((prev) => new Set(prev).add(targetUserId));
+    startTransition(() => pokeFriend(targetUserId));
   }
 
   return (
@@ -160,9 +188,33 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
                 background: segment === s ? "rgba(61,139,253,0.18)" : "transparent",
                 color: segment === s ? "var(--blue)" : "var(--ink-dim)",
                 transition: "background .2s ease, color .2s ease",
+                position: "relative",
               }}
             >
               {s}
+              {s === "friends" && incoming.length > 0 && (
+                <span
+                  aria-label={`${incoming.length} pending request${incoming.length > 1 ? "s" : ""}`}
+                  style={{
+                    position: "absolute",
+                    top: 3,
+                    right: 10,
+                    minWidth: 15,
+                    height: 15,
+                    padding: "0 3px",
+                    borderRadius: 999,
+                    background: "var(--red)",
+                    color: "#fff",
+                    fontSize: 9.5,
+                    fontWeight: 800,
+                    lineHeight: "15px",
+                    textAlign: "center",
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  {incoming.length > 9 ? "9+" : incoming.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -234,6 +286,29 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
                       👊{f.bumpCount > 0 && <span>{f.bumpCount}</span>}
                     </button>
                   )}
+                  {f.type === "poke" && f.actorUserId && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        poke(f.actorUserId!);
+                      }}
+                      disabled={pokedIds.has(f.actorUserId)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                        borderRadius: 999,
+                        padding: "8px 13px",
+                        fontSize: 14,
+                        fontWeight: 700,
+                        background: pokedIds.has(f.actorUserId) ? "rgba(48,209,88,0.16)" : "rgba(61,139,253,0.14)",
+                        color: pokedIds.has(f.actorUserId) ? "var(--green)" : "var(--blue)",
+                        transition: "transform .15s ease, background .2s ease",
+                      }}
+                    >
+                      {pokedIds.has(f.actorUserId) ? "✅" : "👊 Bump back"}
+                    </button>
+                  )}
                 </div>
               );
             })
@@ -287,7 +362,7 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
                           <span style={{ fontSize: 14, fontWeight: 700, color: "var(--blue)", fontVariantNumeric: "tabular-nums" }}>🔥 {f.streak}</span>
                           <button
                             aria-label={poked ? `Fist-bumped ${f.name}` : `Fist-bump ${f.name}`}
-                            onClick={() => poke(f)}
+                            onClick={() => poke(f.userId)}
                             disabled={poked}
                             className={poked ? undefined : "bump-nudge"}
                             style={{

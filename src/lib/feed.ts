@@ -18,6 +18,8 @@ export interface FeedItem {
   eventId: string;
   name: string;
   own: boolean;
+  /** The event's actor (ev.user_id) — who to fist-bump back on a `poke`. */
+  actorUserId: string | null;
   type: "session" | "badge" | "friendship" | "poke";
   text: string;
   context: string | null;
@@ -36,7 +38,7 @@ export function feedItemFrom(
 ): FeedItem {
   const own = ev?.user_id === meId;
   const when = new Date(createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  const base = { eventId, own, context: null as string | null, when, bumpCount, bumpedByMe };
+  const base = { eventId, own, actorUserId: ev?.user_id ?? null, context: null as string | null, when, bumpCount, bumpedByMe };
 
   if (ev?.type === "friendship") {
     // Symmetric copy: "You and Mike are now friends" for either party, or

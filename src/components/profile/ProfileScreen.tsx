@@ -60,11 +60,19 @@ export function ProfileScreen(p: Props) {
   const [height, setHeight] = useState(p.body.heightCm ?? 178);
   const [weight, setWeight] = useState(p.body.weightKg ?? 82);
   const [goal, setGoal] = useState(p.goal);
-  const [days, setDays] = useState<boolean[]>(() => {
+  const daysFromAvailability = (avail: number[]) => {
     const w = [false, false, false, false, false, false, false];
-    p.weekdayAvailability.forEach((i) => (w[i] = true));
+    avail.forEach((i) => (w[i] = true));
     return w;
-  });
+  };
+  const [days, setDays] = useState<boolean[]>(() => daysFromAvailability(p.weekdayAvailability));
+  const [committedDays, setCommittedDays] = useState<boolean[]>(days);
+  const [confirmDiscardDays, setConfirmDiscardDays] = useState(false);
+  const daysDirty = days.some((v, i) => v !== committedDays[i]);
+  const closeAvailabilitySheet = () => {
+    if (daysDirty) setConfirmDiscardDays(true);
+    else setSheet(null);
+  };
   const [equip, setEquip] = useState(p.equipment);
   const [limits, setLimits] = useState<string[]>(p.limitations);
 
@@ -91,7 +99,8 @@ export function ProfileScreen(p: Props) {
     startTransition(async () => {
       await updateTraining(fields);
       if (fields.weekdayAvailability !== undefined) {
-        await regenerateWeek();
+        await regenerateWeek(true);
+        setCommittedDays(days);
         router.refresh();
         setSheet(null);
       } else {
@@ -159,7 +168,14 @@ export function ProfileScreen(p: Props) {
         </Group>
 
         <Group label="Training">
-          <Row label="Availability" value={`${days.filter(Boolean).length} days/week`} onClick={() => setSheet("availability")} />
+          <Row
+            label="Availability"
+            value={`${committedDays.filter(Boolean).length} days/week`}
+            onClick={() => {
+              setDays(committedDays);
+              setSheet("availability");
+            }}
+          />
           <Row label="Equipment" value={equip === "full_gym" ? "Full gym" : equip === "basic" ? "Basic" : equip === "park" ? "Park" : "None"} onClick={() => setSheet("equipment")} />
           <Row label="Limitations" value={limits.join(", ") || "None"} onClick={() => setSheet("limitations")} />
         </Group>
@@ -258,7 +274,7 @@ export function ProfileScreen(p: Props) {
       </Sheet>
 
       {/* ===== Availability sheet ===== */}
-      <Sheet open={sheet === "availability"} onClose={() => setSheet(null)} title="Training days">
+      <Sheet open={sheet === "availability"} onClose={closeAvailabilitySheet} title="Training days">
         <div style={{ display: "flex", gap: 8, justifyContent: "space-between", padding: "4px 0 8px" }}>
           {WEEKDAY_LABELS.map((label, i) => (
             <button
@@ -294,6 +310,35 @@ export function ProfileScreen(p: Props) {
           onClick={() => saveTraining({ weekdayAvailability: days.map((on, i) => (on ? i : -1)).filter((i) => i >= 0) })}
         />
       </Sheet>
+
+      {/* ===== Unsaved-changes guard for the availability sheet ===== */}
+      {confirmDiscardDays && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 110, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)" }} onClick={() => setConfirmDiscardDays(false)} />
+          <div style={{ position: "relative", width: "100%", maxWidth: 320, background: "var(--bg-elev)", border: "1px solid var(--card-border)", borderRadius: 16, padding: 20, textAlign: "center" }}>
+            <div style={{ fontSize: 17, fontWeight: 800, letterSpacing: "-0.01em", marginBottom: 6 }}>Discard changes?</div>
+            <div style={{ fontSize: 13.5, color: "var(--ink-dim)", lineHeight: 1.5, marginBottom: 18 }}>
+              You changed your training days but haven&rsquo;t saved. Leaving now discards the change.
+            </div>
+            <button
+              onClick={() => {
+                setDays(committedDays);
+                setConfirmDiscardDays(false);
+                setSheet(null);
+              }}
+              style={{ width: "100%", padding: 13, borderRadius: 12, background: "rgba(255,69,58,0.14)", color: "var(--red)", fontSize: 15, fontWeight: 700 }}
+            >
+              Discard
+            </button>
+            <button
+              onClick={() => setConfirmDiscardDays(false)}
+              style={{ width: "100%", padding: 13, borderRadius: 12, background: "var(--fill-resting)", color: "var(--ink)", fontSize: 15, fontWeight: 700, marginTop: 8 }}
+            >
+              Keep editing
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ===== Equipment sheet ===== */}
       <Sheet open={sheet === "equipment"} onClose={() => setSheet(null)} title="Equipment">

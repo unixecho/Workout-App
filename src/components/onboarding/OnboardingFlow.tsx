@@ -94,9 +94,6 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
   const handleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // S0
-  const [emailOpen, setEmailOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -226,10 +223,9 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
   const fmtWeight = (kg: number) => (metric ? `${Math.round(kg)} kg` : `${Math.round(kg * 2.2046)} lb`);
 
   // Surface auth errors Supabase returns either in the URL hash (implicit
-  // flow, e.g. #error=access_denied&error_code=otp_expired) or as query
-  // params forwarded by /auth/callback (PKCE flow \u2014 an expired/already-used
-  // link, or a code-exchange failure). Without this the user silently lands
-  // back on step 0 with no explanation.
+  // flow) or as query params forwarded by /auth/callback (PKCE flow \u2014 a
+  // code-exchange failure). Without this the user silently lands back on
+  // step 0 with no explanation.
   useEffect(() => {
     const hashParams = window.location.hash ? new URLSearchParams(window.location.hash.slice(1)) : null;
     const queryParams = new URLSearchParams(window.location.search);
@@ -238,13 +234,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
     const err = params.get("error");
     if (!code && !err) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- URL only exists client-side, must be read post-mount
-    setAuthError(
-      code === "otp_expired"
-        ? "That sign-in link has expired or was already used. Enter your email and we\u2019ll send a fresh one."
-        : (params.get("error_description") ?? "Sign-in failed. Please try again."),
-    );
-    setEmailOpen(true);
-    setMagicLinkSent(false);
+    setAuthError(params.get("error_description") ?? "Sign-in failed. Please try again.");
     // Clean the hash/query so a refresh doesn\u2019t re-show a stale error
     window.history.replaceState(null, "", window.location.pathname);
   }, []);
@@ -261,25 +251,6 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
       setAuthBusy(false);
     }
     // On success the browser navigates away to Google immediately.
-  }
-
-  async function handleSendMagicLink() {
-    if (!email.includes("@")) {
-      setAuthError("Enter a valid email address.");
-      return;
-    }
-    setAuthError(null);
-    setAuthBusy(true);
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${SITE_URL ?? window.location.origin}/auth/callback` },
-    });
-    setAuthBusy(false);
-    if (error) {
-      setAuthError(error.message);
-    } else {
-      setMagicLinkSent(true);
-    }
   }
 
   function onHandleChange(v: string) {
@@ -331,6 +302,13 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
         limitations,
       });
     } catch (err) {
+      // completeOnboarding ends with redirect("/today"), which Next.js
+      // implements by throwing a special NEXT_REDIRECT error — rethrow it so
+      // the framework can perform the navigation instead of it flashing here
+      // as a real error for an instant.
+      if (err && typeof err === "object" && "digest" in err && String(err.digest).startsWith("NEXT_REDIRECT")) {
+        throw err;
+      }
       setAccepted(false);
       setSaveError(err instanceof Error ? err.message : "Something went wrong — try again.");
     }
@@ -490,61 +468,6 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
             </span>
             Continue with Google
           </PrimaryTintButton>
-          <button
-            onClick={() => setEmailOpen(!emailOpen)}
-            style={{
-              alignSelf: "center",
-              border: "none",
-              borderRadius: 999,
-              padding: "10px 18px",
-              fontSize: 14,
-              fontWeight: 700,
-              background: "var(--fill-resting)",
-              color: "var(--ink)",
-              transition: "transform .15s ease, background .15s ease",
-            }}
-          >
-            Continue with email
-          </button>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateRows: emailOpen ? "1fr" : "0fr",
-              transition: `grid-template-rows .35s ${EASE}`,
-            }}
-          >
-            <div style={{ overflow: "hidden" }}>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 10,
-                  paddingTop: 4,
-                  opacity: emailOpen ? 1 : 0,
-                  transition: "opacity .3s ease",
-                }}
-              >
-                {magicLinkSent ? (
-                  <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--green)", textAlign: "center", padding: "10px 0" }}>
-                    Check your email for a sign-in link.
-                  </div>
-                ) : (
-                  <>
-                    <input
-                      type="email"
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      style={inputStyle()}
-                    />
-                    <PrimaryTintButton onClick={handleSendMagicLink} disabled={authBusy}>
-                      Send magic link
-                    </PrimaryTintButton>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
       </Screen>
 
