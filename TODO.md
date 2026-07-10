@@ -14,9 +14,10 @@
       animations; focus-aware mobility warm-up pick (pull day → dead hang,
       upper → arm circles/shoulder rolls, lower → leg swings/hip circles);
       Library "Warm-up" filter; stats balance ignores the tag
-- [x] **Realtime friends feed** (code shipped; needs migration 0011): live
-      feed inserts animate in, fist-bump counts sync across clients,
-      incoming requests refresh the list
+- [x] **Realtime friends feed** (migration 0011 applied + verified: 4/4
+      events have self rows, all 3 tables published): live feed inserts
+      animate in, fist-bump counts sync across clients, incoming requests
+      refresh the list
 - [x] **Perspective-aware activity**: own events read "You finished … /
       earned …", friends' read "John has finished …"; badge events are
       clickable → /badges (Friends + Today feeds)
@@ -26,13 +27,6 @@
 - [x] **Body-stat sliders**: height/weight/age set by slider (iOS-style
       filled track, unit-aware readouts incl. ft-in/lb) in onboarding and
       the profile Body stats sheet
-
-## Open (immediate)
-
-- [ ] ⚠️ **Apply migration 0011 to Frankfurt** (feed self fan-out backfill +
-      fanout function update + realtime publication for feed_entries /
-      fist_bumps / friend_requests) — realtime feed + "You …" self items
-      don't work in prod until then
 
 ## Done (v1 build-out)
 
