@@ -180,3 +180,10 @@
 - [ ] Google OAuth consent screen verification before public launch (owner)
 - [ ] Decide preview-vs-prod Supabase environment strategy before the next
       schema change ships (docs/TD.md § Deployment)
+- [ ] ⚠️ **Legal: Terms of Service, Privacy Policy, Accessibility Statement**
+      — first drafts written (docs/legal/), NOT legal advice. Owner still
+      needs to: (1) fill in business name/contact email/governing-law
+      placeholders, (2) have an actual lawyer review before public launch
+      (health-adjacent data + EU users under GDPR raises real exposure),
+      (3) wire the docs into the app — an acceptance checkbox on onboarding
+      S0 and links from Profile → About (per FD §10)
