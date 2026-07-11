@@ -1,5 +1,24 @@
 # TODO
 
+## Done (2026-07-11)
+
+- [x] **Session Editor drag-to-reorder**: hold any exercise row ~0.4s to
+      lift it (scale + shadow + haptic), drag to a new position — siblings
+      slide out of the way, release settles into place. New order persists
+      via `order_index` on Save and flows through to Today and the Workout
+      Player. Verified in preview with synthetic pointer drags (down 2
+      slots, up 2 slots, quick-tap still opens the dose sheet).
+- [x] **Full-gym library expansion** (migration 0014, ⚠️ NOT YET APPLIED):
+      26 new exercises — the big barbell lifts (deadlift, RDL, OHP, row,
+      incline bench, hip thrust, front squat), machines (leg extension/curl,
+      hack squat, chest press, pec deck, shoulder press, assisted pull-up,
+      calf raise, back extension), cables (pushdown, curl, fly, face pull,
+      cable crunch) and dumbbell accessories (incline press; lateral raise +
+      hammer curl are `basic` so home lifters get them too). 7 new
+      hand-authored demo patterns (curl, latraise, pushdown, legext,
+      legcurl, fly, facepull). Isolation arm work now carries an `Arms` tag
+      so the "Upper — Shoulders & Arms" day finally has real matches.
+
 ## Done (2026-07-10, third round — owner bug reports)
 
 - [x] **Real root cause of "activity doesn't update" found**: `FriendsScreen`
@@ -162,6 +181,17 @@
 
 ## Open
 
+- [ ] ⚠️ **Apply migration 0014 (gym expansion) to Frankfurt prod** via the
+      SQL editor — app code referencing the new demo patterns is already
+      deployed and safe either way (unknown patterns fall back to a generic
+      loop), but the new exercises only appear once 0014 runs
+- [ ] **Hebrew locale** — in progress on the local `i18n-hebrew` branch
+      (NOT pushed, per owner). Infra + first translated surfaces done;
+      remaining: extract the rest of the screens, RTL audit, exercise-name
+      translations (DB strategy documented in docs/I18N.md on the branch)
+- [ ] Weight/load tracking per set (the natural companion to the gym
+      expansion for "ego lifters" — logging what you lifted, PRs on Stats).
+      **Owner call on scope**: schema + player UI + stats, a real feature
 - [ ] Delete the old Sydney Supabase project now that the redirect-URL fix
       is confirmed live (see Done) — do this once a real sign-in has been
       tested end-to-end on Frankfurt (test accounts don't carry over —
@@ -172,7 +202,8 @@
 - [ ] Badge engine: implement remaining rule types (full_week, comeback,
       goal_reached, perfect_form, friend/social) + streak freeze auto-apply
       (earn 1 per 7 sessions, bank 2)
-- [ ] Session Editor drag-to-reorder; "Move to…" / "Duplicate" day actions
+- [ ] Session Editor "Move to…" / "Duplicate" day actions (drag-to-reorder:
+      done 2026-07-11)
 - [ ] Workout Player: "Remove from today" + "End workout early" flows
 - [ ] Notifications (workout reminder, streak-at-risk, social batch) — needs
       push infrastructure decision

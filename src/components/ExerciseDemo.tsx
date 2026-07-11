@@ -310,6 +310,43 @@ const PATTERNS: Record<string, Pattern> = {
     b: { head: [62, 29], bones: ["34,10 90,10", "62,37 62,61", "62,61 61,77 60,91", "62,39 52,25 52,10", "62,39 72,25 72,10"] },
     dur: "4s",
   },
+
+  // ---- Gym machines & free-weight isolation (2026-07 pass) ---------------
+  curl: {
+    // standing curl: elbow pinned at the side, forearm arcs up
+    a: { head: [62, 20], bones: ["62,28 62,56", "62,56 62,74", "62,74 62,92", "62,92 74,92", "62,34 66,52 68,68"] },
+    b: { head: [62, 20], bones: ["62,28 62,56", "62,56 62,74", "62,74 62,92", "62,92 74,92", "62,34 66,52 50,40"] },
+  },
+  latraise: {
+    // straight arm rises from the thigh to shoulder height
+    a: { head: [62, 20], bones: ["62,28 62,56", "62,56 62,74", "62,74 62,92", "62,92 74,92", "62,34 68,48 72,60"] },
+    b: { head: [62, 20], bones: ["62,28 62,56", "62,56 62,74", "62,74 62,92", "62,92 74,92", "62,34 76,37 88,36"] },
+  },
+  pushdown: {
+    // slight forward lean, elbow pinned, forearm presses down to the thigh
+    a: { head: [58, 20], bones: ["60,28 64,56", "64,56 62,74", "62,74 62,92", "62,92 74,92", "61,34 68,50 76,36"] },
+    b: { head: [58, 20], bones: ["60,28 64,56", "64,56 62,74", "62,74 62,92", "62,92 74,92", "61,34 68,50 78,64"] },
+  },
+  legext: {
+    // seated on the pad: shin swings from hanging down to locked out
+    a: { head: [48, 30], bones: ["40,66 88,66", "50,38 62,62", "62,62 80,62", "80,62 78,86", "52,42 58,56"] },
+    b: { head: [48, 30], bones: ["40,66 88,66", "50,38 62,62", "62,62 80,62", "80,62 96,58", "52,42 58,56"] },
+  },
+  legcurl: {
+    // seated: shin sweeps from out front to tucked under the pad
+    a: { head: [48, 30], bones: ["40,66 88,66", "50,38 62,62", "62,62 80,62", "80,62 96,64", "52,42 58,56"] },
+    b: { head: [48, 30], bones: ["40,66 88,66", "50,38 62,62", "62,62 80,62", "80,62 76,84", "52,42 58,56"] },
+  },
+  fly: {
+    // seated upright: straight arm sweeps from opened back to together in front
+    a: { head: [58, 26], bones: ["44,66 84,66", "58,34 60,62", "60,62 78,64", "78,64 78,88", "58,38 44,40 32,42"] },
+    b: { head: [58, 26], bones: ["44,66 84,66", "58,34 60,62", "60,62 78,64", "78,64 78,88", "58,38 72,40 86,42"] },
+  },
+  facepull: {
+    // rope pulled from arms-long at eye height to elbow high beside the ear
+    a: { head: [62, 20], bones: ["62,28 62,56", "62,56 62,74", "62,74 62,92", "62,92 74,92", "62,32 78,30 94,28"] },
+    b: { head: [62, 20], bones: ["62,28 62,56", "62,56 62,74", "62,74 62,92", "62,92 74,92", "62,32 76,28 66,26"] },
+  },
 };
 
 const KEYTIMES_HOLD = "0;0.4;0.6;1";

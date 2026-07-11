@@ -5,7 +5,50 @@ should read this first, then CLAUDE.md, then docs/FD.md.
 
 ---
 
-## 2026-07-10 (latest) — Auth fixes, warmup category, realtime social, owner bug-fix round
+## 2026-07-11 (latest) — Drag-to-reorder, gym expansion, Hebrew groundwork
+
+Three owner asks this session:
+
+**1. Session Editor drag-to-reorder — shipped.** Hold any exercise row
+~0.4s to lift it (scale + shadow + vibration where supported), drag to
+reorder — siblings slide out of the way at 60fps (direct transforms, no
+per-frame React), release glides it into its slot. Quick taps still open
+the dose sheet; scrolling still works (8px move tolerance cancels the
+press; scroll is only locked once lifted). Order persists through
+`order_index` on Save and flows to Today + Workout Player automatically.
+Verified in preview with synthetic pointer sequences: drag down 2 slots ✓,
+drag up 2 slots ✓, tap-opens-sheet ✓, settle animation ✓, console clean ✓.
+
+**2. Full-gym library expansion — written, ⚠️ migration NOT applied yet.**
+`0014_gym_expansion.sql`: 26 exercises for ego lifters / pros — barbell
+deadlift/RDL/OHP/row/incline bench/hip thrust/front squat, machines (leg
+extension, leg curl, hack squat, chest press, pec deck, shoulder press,
+assisted pull-up, calf raise, back extension), cables (pushdown, curl,
+fly, face pull, cable crunch), dumbbell accessories. Lateral raise +
+hammer curl are tagged `basic` (only need dumbbells — home users get them
+too); everything else `full_gym`. 7 new hand-authored demo patterns in
+ExerciseDemo (curl, latraise, pushdown, legext, legcurl, fly, facepull —
+all visually checked in preview). Isolation arm work carries a new `Arms`
+muscle tag: the "Upper — Shoulders & Arms" template day previously only
+matched Delts; gym users now get real arm days. Adaptations follow 0004
+conventions (back → avoid on deadlift/RDL/barbell row; shoulder → avoid
+on overhead pressing, consistent with db-shoulder-press). **Apply 0014 via
+the Frankfurt SQL editor** — deploying the app code first is safe (unknown
+patterns fall back gracefully), but new exercises only show once applied.
+
+**3. Hebrew locale — started on local branch `i18n-hebrew`, NOT pushed**
+(owner: don't push Hebrew translations yet). See the branch's own handoff
+entry + docs/I18N.md there for the approach (cookie-based locale, no URL
+routing, RTL via `dir` on <html>, hand-rolled typed dictionary — no dep).
+
+Also flagged in TODO: per-set weight logging is the natural follow-up to
+the gym expansion (ego lifters want numbers) — owner call on scope.
+
+**Verified**: `tsc --noEmit` clean, production build clean, drag behavior
++ new demo patterns exercised in a temporary preview harness (deleted
+before commit).
+
+## 2026-07-10 — Auth fixes, warmup category, realtime social, owner bug-fix round
 
 Owner tested this session's fixes live and confirmed they work. Three
 sub-rounds, all pushed to `main` and deployed:

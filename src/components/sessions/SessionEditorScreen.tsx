@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { flushSync } from "react-dom";
 import { Sheet } from "@/components/Sheet";
 import { saveSession, swapExercise } from "@/app/sessions/[dayId]/actions";
 
@@ -50,6 +51,24 @@ function estimate(list: EditorExercise[]): number {
   return Math.max(5, Math.round(secs / 60));
 }
 
+// Long-press-then-drag reordering (FD §4). Pointer events only: hold a row
+// ~400ms to lift it (scale + shadow, scroll locked), drag tracks the finger
+// with direct transforms (no per-frame React work), siblings slide out of the
+// way, release settles into the slot and marks the session dirty.
+const LIFT_MS = 400;
+const MOVE_TOLERANCE = 8;
+const SETTLE = "transform .25s cubic-bezier(.2,.7,.3,1)";
+
+interface DragState {
+  id: string;
+  ids: string[];
+  from: number;
+  to: number;
+  startY: number;
+  tops: number[];
+  heights: number[];
+}
+
 export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usualMinutes, initialExercises, warmupOptions }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState(initialTitle);
@@ -59,6 +78,13 @@ export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usual
   const [swapOpen, setSwapOpen] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  const rowEls = useRef(new Map<string, HTMLButtonElement>());
+  const dragRef = useRef<DragState | null>(null);
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pressStart = useRef<{ id: string; x: number; y: number } | null>(null);
+  const suppressClick = useRef(false);
 
   const open = items.find((i) => i.id === openId) ?? null;
   const minutes = useMemo(() => estimate(items), [items]);
@@ -66,6 +92,146 @@ export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usual
   const patch = (id: string, p: Partial<EditorExercise>) => {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...p } : i)));
     setDirty(true);
+  };
+
+  const cancelPress = () => {
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+    pressStart.current = null;
+  };
+
+  // Refs so the document-level listeners are stable identities we can always
+  // detach, with no stale closures over `items` (the drag snapshot lives in
+  // dragRef).
+  const blockTouch = useRef((e: TouchEvent) => e.preventDefault());
+
+  const onDragMove = useRef((e: PointerEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const el = rowEls.current.get(d.id);
+    if (!el) return;
+    const dy = e.clientY - d.startY;
+    el.style.transition = "";
+    el.style.transform = `translateY(${dy}px) scale(1.03)`;
+
+    const center = d.tops[d.from] + d.heights[d.from] / 2 + dy;
+    let to = 0;
+    for (let i = 0; i < d.ids.length; i++) {
+      if (i === d.from) continue;
+      if (center > d.tops[i] + d.heights[i] / 2) to++;
+    }
+    if (to === d.to) return;
+    d.to = to;
+    d.ids.forEach((id, i) => {
+      if (id === d.id) return;
+      const row = rowEls.current.get(id);
+      if (!row) return;
+      let shift = 0;
+      if (i > d.from && i <= d.to) shift = -d.heights[d.from];
+      else if (i < d.from && i >= d.to) shift = d.heights[d.from];
+      row.style.transition = SETTLE;
+      row.style.transform = shift ? `translateY(${shift}px)` : "";
+    });
+  });
+
+  const onDrop = useRef((_e: PointerEvent) => {});
+
+  const detachDragListeners = () => {
+    document.removeEventListener("touchmove", blockTouch.current);
+    document.removeEventListener("pointermove", onDragMove.current);
+    document.removeEventListener("pointerup", onDrop.current);
+    document.removeEventListener("pointercancel", onDrop.current);
+    document.body.style.userSelect = "";
+  };
+
+  onDrop.current = () => {
+    const d = dragRef.current;
+    if (!d) return;
+    dragRef.current = null;
+    detachDragListeners();
+
+    // Glide the lifted row into its slot, then commit the new order and strip
+    // every inline transform in the same paint so nothing jumps.
+    let targetY = 0;
+    if (d.to > d.from) for (let i = d.from + 1; i <= d.to; i++) targetY += d.heights[i];
+    else for (let i = d.to; i < d.from; i++) targetY -= d.heights[i];
+    const el = rowEls.current.get(d.id);
+    if (el) {
+      el.style.transition = SETTLE;
+      el.style.transform = `translateY(${targetY}px) scale(1)`;
+    }
+    window.setTimeout(() => {
+      for (const row of rowEls.current.values()) {
+        row.style.transition = "";
+        row.style.transform = "";
+      }
+      flushSync(() => {
+        setDraggingId(null);
+        if (d.to !== d.from) {
+          setItems((prev) => {
+            const next = [...prev];
+            const [moved] = next.splice(d.from, 1);
+            next.splice(d.to, 0, moved);
+            return next;
+          });
+          setDirty(true);
+        }
+      });
+    }, 260);
+  };
+
+  const lift = (id: string) => {
+    pressTimer.current = null;
+    const start = pressStart.current;
+    if (!start || start.id !== id) return;
+    const ids = items.map((i) => i.id);
+    const from = ids.indexOf(id);
+    if (from < 0) return;
+    const tops: number[] = [];
+    const heights: number[] = [];
+    for (const rowId of ids) {
+      const el = rowEls.current.get(rowId);
+      tops.push(el?.offsetTop ?? 0);
+      heights.push(el?.offsetHeight ?? 0);
+    }
+    dragRef.current = { id, ids, from, to: from, startY: start.y, tops, heights };
+    suppressClick.current = true;
+    setDraggingId(id);
+    const el = rowEls.current.get(id);
+    if (el) {
+      el.style.transition = "transform .18s ease";
+      el.style.transform = "scale(1.03)";
+    }
+    try {
+      navigator.vibrate?.(8);
+    } catch {
+      // haptics are best-effort
+    }
+    document.addEventListener("touchmove", blockTouch.current, { passive: false });
+    document.addEventListener("pointermove", onDragMove.current);
+    document.addEventListener("pointerup", onDrop.current);
+    document.addEventListener("pointercancel", onDrop.current);
+    document.body.style.userSelect = "none";
+  };
+
+  useEffect(() => detachDragListeners, []);
+
+  const onRowPointerDown = (id: string) => (e: React.PointerEvent) => {
+    if (pending || dragRef.current) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    suppressClick.current = false;
+    cancelPress();
+    pressStart.current = { id, x: e.clientX, y: e.clientY };
+    pressTimer.current = setTimeout(() => lift(id), LIFT_MS);
+  };
+
+  const onRowPointerMove = (e: React.PointerEvent) => {
+    if (dragRef.current || !pressStart.current) return;
+    const dx = e.clientX - pressStart.current.x;
+    const dy = e.clientY - pressStart.current.y;
+    if (dx * dx + dy * dy > MOVE_TOLERANCE * MOVE_TOLERANCE) cancelPress();
   };
 
   // Swap the warm-up in place. Persisted immediately (it's a whole-row change,
@@ -81,7 +247,7 @@ export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usual
       await saveSession(
         dayId,
         title,
-        items.map((i) => ({ id: i.id, sets: i.sets, reps_min: i.repsMin, reps_max: i.repsMax, seconds: i.seconds, rest_seconds: i.restSeconds })),
+        items.map((i, idx) => ({ id: i.id, order_index: idx, sets: i.sets, reps_min: i.repsMin, reps_max: i.repsMax, seconds: i.seconds, rest_seconds: i.restSeconds })),
         removed,
       );
       setDirty(false);
@@ -129,11 +295,30 @@ export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usual
       </div>
 
       <div style={{ padding: "4px 16px 0", flex: 1 }}>
-        <div style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 16, overflow: "hidden" }}>
+        <div style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 16 }}>
           {items.map((e, i) => (
             <button
               key={e.id}
-              onClick={() => setOpenId(e.id)}
+              ref={(el) => {
+                if (el) rowEls.current.set(e.id, el);
+                else rowEls.current.delete(e.id);
+              }}
+              onClick={() => {
+                if (suppressClick.current) {
+                  suppressClick.current = false;
+                  return;
+                }
+                setOpenId(e.id);
+              }}
+              onPointerDown={onRowPointerDown(e.id)}
+              onPointerMove={onRowPointerMove}
+              onPointerUp={() => {
+                if (!dragRef.current) cancelPress();
+              }}
+              onPointerCancel={() => {
+                if (!dragRef.current) cancelPress();
+              }}
+              onContextMenu={(ev) => ev.preventDefault()}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -141,8 +326,22 @@ export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usual
                 width: "100%",
                 textAlign: "left",
                 padding: "14px 16px",
-                borderTop: i === 0 ? "none" : "1px solid var(--hairline)",
+                borderTop: i === 0 || draggingId === e.id ? "none" : "1px solid var(--hairline)",
                 opacity: e.isWarmup || e.isCooldown ? 0.7 : 1,
+                touchAction: "pan-y",
+                userSelect: "none",
+                WebkitUserSelect: "none",
+                WebkitTouchCallout: "none",
+                ...(draggingId === e.id
+                  ? {
+                      position: "relative" as const,
+                      zIndex: 10,
+                      background: "#1d242e",
+                      borderRadius: 12,
+                      boxShadow: "0 10px 28px rgba(0,0,0,0.5)",
+                      opacity: 1,
+                    }
+                  : null),
               }}
             >
               <div style={{ width: 34, height: 34, borderRadius: 10, background: e.isWarmup || e.isCooldown ? "rgba(255,159,10,0.14)" : "rgba(61,139,253,0.14)", color: e.isWarmup || e.isCooldown ? "var(--amber)" : "var(--blue)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>

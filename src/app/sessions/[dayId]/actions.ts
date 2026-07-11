@@ -6,6 +6,7 @@ import { estimateMinutes } from "@/lib/plan/exercises";
 
 export interface DoseUpdate {
   id: string;
+  order_index: number;
   sets: number;
   reps_min: number | null;
   reps_max: number | null;
@@ -31,7 +32,7 @@ export async function saveSession(
   for (const u of updates) {
     await supabase
       .from("session_exercises")
-      .update({ sets: u.sets, reps_min: u.reps_min, reps_max: u.reps_max, seconds: u.seconds, rest_seconds: u.rest_seconds })
+      .update({ order_index: u.order_index, sets: u.sets, reps_min: u.reps_min, reps_max: u.reps_max, seconds: u.seconds, rest_seconds: u.rest_seconds })
       .eq("id", u.id);
   }
 
