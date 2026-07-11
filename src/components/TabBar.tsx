@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useI18n } from "@/lib/i18n/client";
 
 const TABS = [
   {
     href: "/today",
-    label: "Today",
+    label: "today" as const,
     icon: (active: boolean) => (
       <path
         d="M13 2L5 13h5l-1 9 9-12h-6l1-8z"
@@ -21,7 +22,7 @@ const TABS = [
   },
   {
     href: "/plan",
-    label: "Plan",
+    label: "plan" as const,
     icon: (active: boolean) => (
       <path
         d="M4 6h16M4 12h16M4 18h11"
@@ -33,7 +34,7 @@ const TABS = [
   },
   {
     href: "/stats",
-    label: "Stats",
+    label: "stats" as const,
     icon: (active: boolean) => (
       <path
         d="M5 20V11M12 20V4M19 20v-6"
@@ -45,7 +46,7 @@ const TABS = [
   },
   {
     href: "/friends",
-    label: "Friends",
+    label: "friends" as const,
     icon: (active: boolean) => {
       const stroke = active ? "var(--blue)" : "var(--ink-faint)";
       return (
@@ -72,7 +73,7 @@ const TABS = [
   },
   {
     href: "/profile",
-    label: "Profile",
+    label: "profile" as const,
     icon: (active: boolean) => {
       const stroke = active ? "var(--blue)" : "var(--ink-faint)";
       return (
@@ -93,6 +94,7 @@ const TABS = [
 
 export function TabBar({ friendRequests = 0, userId = null }: { friendRequests?: number; userId?: string | null }) {
   const pathname = usePathname();
+  const { t } = useI18n();
   const [requests, setRequests] = useState(friendRequests);
 
   // Keep in sync with the server count after accept/decline (router.refresh
@@ -200,7 +202,7 @@ export function TabBar({ friendRequests = 0, userId = null }: { friendRequests?:
                 color: active ? "var(--blue)" : "var(--ink-faint)",
               }}
             >
-              {tab.label}
+              {t.tabs[tab.label]}
             </span>
           </Link>
         );

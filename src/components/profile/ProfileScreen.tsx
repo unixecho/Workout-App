@@ -14,6 +14,8 @@ import {
 } from "@/app/(tabs)/profile/actions";
 import { regenerateWeek } from "@/app/(tabs)/plan/actions";
 import { StatSlider } from "@/components/StatSlider";
+import { useI18n } from "@/lib/i18n/client";
+import { setLocale } from "@/lib/i18n/actions";
 
 const WEEKDAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 const LIMITATION_TAGS = ["Knee", "Shoulder", "Back", "Wrist", "Ankle", "Hip", "Elbow", "Neck"];
@@ -45,6 +47,7 @@ type EditSheet = null | "body" | "goal" | "availability" | "equipment" | "limita
 
 export function ProfileScreen(p: Props) {
   const router = useRouter();
+  const { locale, t } = useI18n();
   const [notif, setNotif] = useState(p.notif);
   const [vis, setVis] = useState(p.visibility);
   const [units, setUnits] = useState(p.unitPref);
@@ -142,6 +145,14 @@ export function ProfileScreen(p: Props) {
 
         <Group label="Account">
           <Row label="Email" value={p.email} />
+          <Row
+            label={t.profile.language}
+            value={t.profile.languageNames[locale]}
+            onClick={() => {
+              const next = locale === "en" ? "he" : "en";
+              startTransition(() => setLocale(next));
+            }}
+          />
         </Group>
 
         <Group label="Body & Goal">
