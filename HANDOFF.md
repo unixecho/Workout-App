@@ -7,6 +7,8 @@ should read this first, then CLAUDE.md, then docs/FD.md.
 
 ## 2026-07-11 (latest) — Drag-to-reorder, gym expansion, Hebrew groundwork
 
+**TL;DR**: drag-to-reorder shipped and live ✓ | gym expansion code deployed (migration 0014 needs manual SQL run) ✓ | hebrew locale infra done, unpushed ✓
+
 Three owner asks this session:
 
 **1. Session Editor drag-to-reorder — shipped.** Hold any exercise row
@@ -36,10 +38,16 @@ on overhead pressing, consistent with db-shoulder-press). **Apply 0014 via
 the Frankfurt SQL editor** — deploying the app code first is safe (unknown
 patterns fall back gracefully), but new exercises only show once applied.
 
-**3. Hebrew locale — started on local branch `i18n-hebrew`, NOT pushed**
-(owner: don't push Hebrew translations yet). See the branch's own handoff
-entry + docs/I18N.md there for the approach (cookie-based locale, no URL
-routing, RTL via `dir` on <html>, hand-rolled typed dictionary — no dep).
+**3. Hebrew locale groundwork — local branch `i18n-hebrew`, NOT pushed**
+(owner: don't push Hebrew translations yet). **Done**: cookie-based locale
+(no URL routing, RTL via `dir` on <html>, hand-rolled typed dictionary
+with compile-time safety), Profile → Account → Language switcher (tap
+cycles EN ↔ HE, server action sets the cookie + revalidates layout).
+Translated: tab bar, full session editor screen, profile language row.
+See the branch's docs/I18N.md for the architecture + remaining work
+(rest of the screens, RTL polish pass, DB content strategy for exercise
+names/cues). Verified in preview: RTL layout, text flips, controls look
+right on mobile.
 
 Also flagged in TODO: per-set weight logging is the natural follow-up to
 the gym expansion (ego lifters want numbers) — owner call on scope.
