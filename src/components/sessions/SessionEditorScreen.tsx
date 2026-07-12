@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { flushSync } from "react-dom";
 import { Sheet } from "@/components/Sheet";
+import { useI18n } from "@/lib/i18n/client";
 import { saveSession, swapExercise } from "@/app/sessions/[dayId]/actions";
 
 export interface EditorExercise {
@@ -71,6 +72,7 @@ interface DragState {
 
 export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usualMinutes, initialExercises, warmupOptions }: Props) {
   const router = useRouter();
+  const { t } = useI18n();
   const [title, setTitle] = useState(initialTitle);
   const [items, setItems] = useState(initialExercises);
   const [removed, setRemoved] = useState<string[]>([]);
@@ -271,7 +273,7 @@ export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usual
           <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
           </svg>
-          Plan
+          {t.tabs.plan}
         </button>
         <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
           <input
@@ -282,14 +284,14 @@ export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usual
             }}
             style={{ flex: 1, minWidth: 0, background: "transparent", border: "none", outline: "none", color: "var(--ink)", fontSize: 26, fontWeight: 800, letterSpacing: "-0.02em", padding: 0 }}
           />
-          {dirty && <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--blue)", flexShrink: 0 }}>• Edited</span>}
+          {dirty && <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--blue)", flexShrink: 0 }}>{t.common.edited}</span>}
         </div>
         <div style={{ fontSize: 15, fontWeight: 500, color: "var(--ink-dim)", marginTop: 3 }}>
-          {dayName} · <span style={{ fontVariantNumeric: "tabular-nums" }}>~{minutes} min</span>
+          {dayName} · <span style={{ fontVariantNumeric: "tabular-nums" }}>{t.common.minutes(minutes)}</span>
         </div>
         {minutes > usualMinutes + 10 && (
           <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--amber)", marginTop: 4 }}>
-            ~{minutes} min — longer than your usual {usualMinutes}
+            {t.editor.longerThanUsual(minutes, usualMinutes)}
           </div>
         )}
       </div>
@@ -353,7 +355,7 @@ export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usual
                   {e.warns && <span style={{ width: 7, height: 7, borderRadius: 999, background: "var(--amber)", flexShrink: 0 }} />}
                 </div>
                 <div style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-dim)", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
-                  {e.isWarmup ? "Warm-up · " : e.isCooldown ? "Cool-down · " : ""}
+                  {e.isWarmup ? t.editor.warmupPrefix : e.isCooldown ? t.editor.cooldownPrefix : ""}
                   {doseSummary(e)}
                 </div>
               </div>
@@ -366,7 +368,7 @@ export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usual
           href={`/library?pick=${dayId}`}
           style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 12, padding: 14, borderRadius: 16, border: "1.5px dashed rgba(61,139,253,0.4)", color: "var(--blue)", fontSize: 15, fontWeight: 700 }}
         >
-          ＋ Add exercise
+          {t.editor.addExercise}
         </Link>
       </div>
 
@@ -385,7 +387,7 @@ export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usual
             transition: "background .2s ease, color .2s ease, transform .15s ease",
           }}
         >
-          {pending ? "Saving…" : "Save"}
+          {pending ? t.common.saving : t.common.save}
         </button>
       </div>
 
@@ -393,10 +395,10 @@ export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usual
       <Sheet open={!!open} onClose={() => setOpenId(null)} title={open?.name}>
         {open && (
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-            <StepperRow label="Sets" value={open.sets} onChange={(v) => patch(open.id, { sets: Math.max(1, Math.min(8, v)) })} />
+            <StepperRow label={t.editor.sets} value={open.sets} onChange={(v) => patch(open.id, { sets: Math.max(1, Math.min(8, v)) })} />
             {open.doseType === "reps" ? (
               <StepperRow
-                label="Reps"
+                label={t.editor.reps}
                 display={`${open.repsMin}–${open.repsMax}`}
                 value={open.repsMax ?? 10}
                 onChange={(v) => {
@@ -405,9 +407,9 @@ export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usual
                 }}
               />
             ) : (
-              <StepperRow label="Seconds" value={open.seconds ?? 30} step={5} onChange={(v) => patch(open.id, { seconds: Math.max(10, Math.min(180, v)) })} />
+              <StepperRow label={t.editor.seconds} value={open.seconds ?? 30} step={5} onChange={(v) => patch(open.id, { seconds: Math.max(10, Math.min(180, v)) })} />
             )}
-            <StepperRow label="Rest between sets" display={`${open.restSeconds}s`} value={open.restSeconds} step={15} onChange={(v) => patch(open.id, { restSeconds: Math.max(0, Math.min(300, v)) })} />
+            <StepperRow label={t.editor.restBetweenSets} display={`${open.restSeconds}s`} value={open.restSeconds} step={15} onChange={(v) => patch(open.id, { restSeconds: Math.max(0, Math.min(300, v)) })} />
             {open.isWarmup && warmupOptions.length > 1 && (
               <button
                 onClick={() => setSwapOpen(true)}
@@ -416,7 +418,7 @@ export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usual
                 <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M16 3l4 4-4 4M20 7H8M8 21l-4-4 4-4M4 17h12" />
                 </svg>
-                Swap warm-up
+                {t.editor.swapWarmup}
               </button>
             )}
             <button
@@ -428,14 +430,14 @@ export function SessionEditorScreen({ dayId, dayName, title: initialTitle, usual
               }}
               style={{ width: "100%", padding: 14, borderRadius: 12, background: "rgba(255,69,58,0.14)", color: "var(--red)", fontSize: 15, fontWeight: 700 }}
             >
-              Remove
+              {t.common.remove}
             </button>
           </div>
         )}
       </Sheet>
 
       {/* Warm-up swap picker */}
-      <Sheet open={swapOpen} onClose={() => setSwapOpen(false)} title="Swap warm-up">
+      <Sheet open={swapOpen} onClose={() => setSwapOpen(false)} title={t.editor.swapWarmup}>
         {open && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: "60vh", overflowY: "auto" }}>
             {warmupOptions
