@@ -47,6 +47,7 @@ export default async function WorkoutPage({ params }: { params: Promise<{ dayId:
       demo_keyframes: { pattern?: string };
       form_cues: string | null;
       common_mistakes: string[];
+      equipment: string;
     };
     return {
       id: r.id,
@@ -64,6 +65,7 @@ export default async function WorkoutPage({ params }: { params: Promise<{ dayId:
       repsMin: r.reps_min,
       repsMax: r.reps_max,
       seconds: r.seconds,
+      equipment: ex.equipment ?? "none",
       done: loggedIds.includes(ex.id),
     };
   });

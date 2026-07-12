@@ -37,7 +37,7 @@ export async function setExerciseLogged(
   workoutLogId: string,
   exerciseId: string,
   logged: boolean,
-  setsCompleted: number[],
+  setsCompleted: Array<{ reps?: number; seconds?: number; weight?: number } | number>,
 ) {
   const supabase = await createClient();
   if (logged) {

@@ -23,6 +23,7 @@ export interface PlayerExercise {
   repsMax: number | null;
   seconds: number | null;
   done: boolean;
+  equipment: string; // for weight input visibility
 }
 
 interface Props {
@@ -41,6 +42,7 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
   const [done, setDone] = useState<Set<string>>(new Set(exercises.filter((e) => e.done).map((e) => e.id)));
   const [openId, setOpenId] = useState<string | null>(exercises.find((e) => !e.done)?.id ?? null);
   const [reps, setReps] = useState<Record<string, { rep: number; set: number }>>({});
+  const [weights, setWeights] = useState<Record<string, number>>({});
   const [celebrate, setCelebrate] = useState<null | { badges: { name: string; description: string }[]; reps: number; minutes: number; exercises: number }>(null);
   const [, startTransition] = useTransition();
   const logIdRef = useRef<string | null>(existingLogId);
@@ -55,9 +57,10 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
     try {
       const raw = localStorage.getItem(storageKey);
       if (!raw) return;
-      const saved = JSON.parse(raw) as { done?: string[]; reps?: Record<string, { rep: number; set: number }> };
+      const saved = JSON.parse(raw) as { done?: string[]; reps?: Record<string, { rep: number; set: number }>; weights?: Record<string, number> };
       // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage only exists client-side; reading it in the initializer would break SSR hydration
       if (saved.reps) setReps((p) => ({ ...saved.reps, ...p }));
+      if (saved.weights) setWeights((p) => ({ ...saved.weights, ...p }));
       if (saved.done?.length) {
         setDone((prev) => {
           const next = new Set(prev);
@@ -72,11 +75,11 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
   }, [storageKey]);
   useEffect(() => {
     try {
-      localStorage.setItem(storageKey, JSON.stringify({ done: Array.from(done), reps }));
+      localStorage.setItem(storageKey, JSON.stringify({ done: Array.from(done), reps, weights }));
     } catch {
       /* storage full/unavailable — non-fatal */
     }
-  }, [done, reps, storageKey]);
+  }, [done, reps, weights, storageKey]);
 
   async function getLogId(): Promise<string> {
     if (!logIdRef.current) logIdRef.current = await ensureWorkoutLog(dayId);
@@ -98,7 +101,11 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
 
     startTransition(async () => {
       const logId = await getLogId();
-      const setsCompleted = Array.from({ length: e.sets }, () => (e.doseType === "reps" ? (e.repsMax ?? 10) : (e.seconds ?? 30)));
+      const weight = weights[e.id] ?? undefined;
+      const setsCompleted = Array.from({ length: e.sets }, () => {
+        const base = e.doseType === "reps" ? { reps: e.repsMax ?? 10 } : { seconds: e.seconds ?? 30 };
+        return weight != null ? { ...base, weight } : base;
+      });
       await setExerciseLogged(logId, e.exerciseId, marking, setsCompleted);
 
       const allDone = required.every((r) => (r.id === e.id ? marking : next.has(r.id)));
@@ -172,8 +179,10 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
               open={openId === e.id}
               isDone={done.has(e.id)}
               repState={reps[e.id] ?? { rep: 0, set: 1 }}
+              weight={weights[e.id]}
               onToggleOpen={() => setOpenId(openId === e.id ? null : e.id)}
               onRep={(rep, set) => setReps((p) => ({ ...p, [e.id]: { rep, set } }))}
+              onWeight={(w) => setWeights((p) => ({ ...p, [e.id]: w }))}
               onComplete={() => toggleDone(e)}
               onAutoComplete={() => {
                 if (!done.has(e.id)) toggleDone(e);
@@ -199,8 +208,10 @@ function ExerciseRow({
   open,
   isDone,
   repState,
+  weight,
   onToggleOpen,
   onRep,
+  onWeight,
   onComplete,
   onAutoComplete,
 }: {
@@ -209,8 +220,10 @@ function ExerciseRow({
   open: boolean;
   isDone: boolean;
   repState: { rep: number; set: number };
+  weight: number | undefined;
   onToggleOpen: () => void;
   onRep: (rep: number, set: number) => void;
+  onWeight: (w: number) => void;
   onComplete: () => void;
   onAutoComplete: () => void;
 }) {
@@ -251,9 +264,9 @@ function ExerciseRow({
           <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 12, opacity: open ? 1 : 0, transition: "opacity .3s ease" }}>
             <ExerciseDemo pattern={e.pattern} animate={open} caption={e.formCue ? undefined : undefined} />
             {e.doseType === "reps" ? (
-              <RepTracker sets={e.sets} target={e.repsMax ?? 10} state={repState} isDone={isDone} onChange={onRep} onFinishAll={onAutoComplete} />
+              <RepTracker sets={e.sets} target={e.repsMax ?? 10} state={repState} isDone={isDone} weight={weight} equipment={e.equipment} onChange={onRep} onWeight={onWeight} onFinishAll={onAutoComplete} />
             ) : (
-              <Timer seconds={e.seconds ?? 30} sets={e.sets} state={repState} isDone={isDone} onChange={onRep} onFinishAll={onAutoComplete} />
+              <Timer seconds={e.seconds ?? 30} sets={e.sets} state={repState} isDone={isDone} weight={weight} equipment={e.equipment} onChange={onRep} onWeight={onWeight} onFinishAll={onAutoComplete} />
             )}
             {e.formCue && (
               <div style={infoBlock("blue")}>
@@ -317,14 +330,20 @@ function RepTracker({
   target,
   state,
   isDone,
+  weight,
+  equipment,
   onChange,
+  onWeight,
   onFinishAll,
 }: {
   sets: number;
   target: number;
   state: { rep: number; set: number };
   isDone: boolean;
+  weight: number | undefined;
+  equipment: string;
   onChange: (rep: number, set: number) => void;
+  onWeight: (w: number) => void;
   onFinishAll: () => void;
 }) {
   const inc = () => {
@@ -356,6 +375,29 @@ function RepTracker({
       <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-dim)", fontVariantNumeric: "tabular-nums" }}>
         Set {state.set} of {sets}
       </div>
+      {equipment !== "none" && (
+        <input
+          type="number"
+          placeholder="Weight (kg)"
+          value={weight ?? ""}
+          onChange={(e) => {
+            const val = parseFloat(e.target.value);
+            if (!isNaN(val)) onWeight(val);
+          }}
+          style={{
+            width: "100%",
+            padding: "8px 12px",
+            borderRadius: 8,
+            border: "1px solid var(--card-border)",
+            background: "var(--bg)",
+            color: "var(--ink)",
+            fontSize: 14,
+            fontWeight: 500,
+            textAlign: "center",
+            marginTop: 4,
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -365,14 +407,20 @@ function Timer({
   sets,
   state,
   isDone,
+  weight,
+  equipment,
   onChange,
+  onWeight,
   onFinishAll,
 }: {
   seconds: number;
   sets: number;
   state: { rep: number; set: number };
   isDone: boolean;
+  weight: number | undefined;
+  equipment: string;
   onChange: (rep: number, set: number) => void;
+  onWeight: (w: number) => void;
   onFinishAll: () => void;
 }) {
   const [left, setLeft] = useState(seconds);
@@ -425,6 +473,29 @@ function Timer({
       <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-dim)", fontVariantNumeric: "tabular-nums" }}>
         Set {state.set} of {sets}
       </div>
+      {equipment !== "none" && (
+        <input
+          type="number"
+          placeholder="Weight (kg)"
+          value={weight ?? ""}
+          onChange={(e) => {
+            const val = parseFloat(e.target.value);
+            if (!isNaN(val)) onWeight(val);
+          }}
+          style={{
+            width: "100%",
+            padding: "8px 12px",
+            borderRadius: 8,
+            border: "1px solid var(--card-border)",
+            background: "var(--bg)",
+            color: "var(--ink)",
+            fontSize: 14,
+            fontWeight: 500,
+            textAlign: "center",
+            marginTop: 4,
+          }}
+        />
+      )}
     </div>
   );
 }
