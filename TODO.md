@@ -181,16 +181,16 @@
 - [x] Branded workout loader (barbell draw-in + squatting figure + RepUp)
       and finish sequence (summary tiles → fade out to Plan)
 
-## In Progress (2026-07-12)
+## Done (2026-07-12)
 
-- [ ] **Weight per set + badges** (Phase 1 done):
+- [x] **Weight per set + badges** — MVP complete:
   - [x] Migration 0015: schema documentation for weight-per-set storage
   - [x] Workout Player: weight input UI in RepTracker/Timer for equipped exercises
   - [x] Weight checkpoint persistence (localStorage)
   - [x] Migration 0016: weight-based badge rules (Loaded 300/500, Daily 1000, Plate Loaded, Squatter, Bencher)
   - [x] Badge evaluation: milestone_loading and total_daily_loading rules
-  - [ ] **Next: Stats UI** — per-exercise per-set PRs, loading progression graphs
-  - [ ] **Next: Enhanced rep tracking** — capture actual reps per set (currently logs defaults)
+  - [x] Stats UI: per-exercise personal records (top 5 by max weight)
+  - Future: enhanced rep tracking (per-set actual values), loading progression graphs
 
 ## Open
 
