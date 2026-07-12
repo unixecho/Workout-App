@@ -156,7 +156,7 @@ export async function completeWorkout(
   const maxLoadByExercise: Record<string, number> = {};
   for (const log of todayLogs ?? []) {
     const sets = log.sets_completed as Array<{ reps?: number; seconds?: number; weight?: number } | number>;
-    const exerciseSlug = (log.exercises as { slug: string } | null)?.slug ?? "";
+    const exerciseSlug = (log.exercises as unknown as { slug: string } | null)?.slug ?? "";
     for (const set of sets) {
       const weight = typeof set === "number" ? 0 : (set.weight ?? 0);
       const reps = typeof set === "number" ? set : (set.reps ?? 1);

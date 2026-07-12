@@ -5,7 +5,65 @@ should read this first, then CLAUDE.md, then docs/FD.md.
 
 ---
 
-## 2026-07-12 (latest) — Weight per set + badges, Stats PRs
+## 2026-07-12 (latest) — Enhanced rep tracking + machine library complete
+
+**TL;DR**: per-set actuals now logged (reps + weight per set) ✓ | 22 new
+machines live in prod (library = 105) ✓ | migrations 0015/0016/0017 ALL
+applied to Frankfurt ✓ | tsc + production build clean ✓
+
+**Enhanced rep tracking** — the player logs what actually happened:
+- Each set records its **actual rep count and the weight in effect when it
+  ended** — changing the weight between sets captures real pyramid loading.
+- New pill button under the counter: "Log set — N reps" (mid-session) /
+  "Finish at N reps" (final set) cuts a set short at the current count;
+  finishing the final set still auto-completes the exercise.
+- A "logged 12 · 10 · 8" line under "Set X of Y" shows captured history.
+- Timers log `{seconds, weight?}` per completed set.
+- Everything checkpoints to localStorage (`setLogs` added to the existing
+  shape) and restores after refresh — verified round-trip in preview.
+- "Mark Complete" without stepping through sets still logs target defaults,
+  so the fast path is unchanged.
+- Two fixes riding along: the final exercise's reps were excluded from the
+  completion total (read a stale `done` set), and the weight input couldn't
+  be cleared once it had a value (both trackers).
+- Implementation note: `setLogsRef` mirrors the state synchronously because
+  the final set logs + completes in the same tick — the transition callback
+  would otherwise read pre-log state.
+
+**Machine library complete (migration 0017 — APPLIED to Frankfurt)**:
+- 22 exercises covering the rest of a commercial gym: smith squat/bench,
+  landmine press, lying leg curl, hip abduction/adduction, seated calf,
+  glute kickback, seated row machine, t-bar row, reverse pec deck, lateral
+  raise machine, preacher curl, seated dip machine, assisted dip (shoulder
+  avoid, like bar-dip), ab crunch, torso rotation, roman chair leg raise,
+  cable lateral raise, straight-arm pulldown, overhead triceps extension,
+  cable pull-through. All `full_gym`, 0014 conventions, ON CONFLICT upsert.
+- 7 new hand-authored demo patterns: abduction, adduction, reversefly,
+  kickback, pullover, overheadext, seatedcalf — all visually checked in a
+  temporary preview harness (deleted before commit).
+- Hip ab/adduction tagged `{Glutes,Hip}`/`{Hip,Glutes}` — no day template
+  uses a "Hip" focus, so Glutes is what makes them match leg days.
+
+**Migrations**: 0015 (doc-only no-op), 0016 (6 weight badges), and 0017
+were applied to Frankfurt prod **via service-role PostgREST upserts** (both
+are pure DML, so this is exactly equivalent to the SQL editor — script
+pattern: scratchpad apply script reading .env.local). Verified live:
+6/6 badges, 22/22 exercises, 105 total in the library. Nothing pending in
+the SQL editor.
+
+**Verified**: `tsc --noEmit` clean, production build clean, all tracker
+interactions + checkpoint restore + timer logging exercised in preview with
+synthetic events, new patterns screenshot-checked.
+
+**Next session**:
+- Loading progression graphs (weight over time) are now fully unblocked —
+  per-set actuals flow into `exercise_logs.sets_completed`.
+- Hebrew locale still pending on `i18n-hebrew` branch (owner call).
+- Consider a "Remove from today" / "End workout early" pass (TODO).
+
+---
+
+## 2026-07-12 (earlier) — Weight per set + badges, Stats PRs
 
 **TL;DR**: weight per set MVP shipped ✓ | weight-based badges defined + evaluated ✓ | Stats PRs display added ✓ | migration 0015 + 0016 ready to apply ✓
 

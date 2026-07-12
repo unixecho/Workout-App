@@ -37,12 +37,20 @@ interface Props {
 
 const EASE = "cubic-bezier(.4,0,.2,1)";
 
+/** One completed set as stored in exercise_logs.sets_completed (migration 0015). */
+export type SetEntry = { reps?: number; seconds?: number; weight?: number };
+
 export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, existingLogId }: Props) {
   const router = useRouter();
   const [done, setDone] = useState<Set<string>>(new Set(exercises.filter((e) => e.done).map((e) => e.id)));
   const [openId, setOpenId] = useState<string | null>(exercises.find((e) => !e.done)?.id ?? null);
   const [reps, setReps] = useState<Record<string, { rep: number; set: number }>>({});
   const [weights, setWeights] = useState<Record<string, number>>({});
+  const [setLogs, setSetLogs] = useState<Record<string, SetEntry[]>>({});
+  // Mirror of setLogs that updates synchronously: the final set of an
+  // exercise is logged in the same tick that marks it complete, and the
+  // transition callback would otherwise read the pre-log state.
+  const setLogsRef = useRef<Record<string, SetEntry[]>>({});
   const [celebrate, setCelebrate] = useState<null | { badges: { name: string; description: string }[]; reps: number; minutes: number; exercises: number }>(null);
   const [, startTransition] = useTransition();
   const logIdRef = useRef<string | null>(existingLogId);
@@ -57,10 +65,19 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
     try {
       const raw = localStorage.getItem(storageKey);
       if (!raw) return;
-      const saved = JSON.parse(raw) as { done?: string[]; reps?: Record<string, { rep: number; set: number }>; weights?: Record<string, number> };
+      const saved = JSON.parse(raw) as {
+        done?: string[];
+        reps?: Record<string, { rep: number; set: number }>;
+        weights?: Record<string, number>;
+        setLogs?: Record<string, SetEntry[]>;
+      };
       // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage only exists client-side; reading it in the initializer would break SSR hydration
       if (saved.reps) setReps((p) => ({ ...saved.reps, ...p }));
       if (saved.weights) setWeights((p) => ({ ...saved.weights, ...p }));
+      if (saved.setLogs) {
+        setLogsRef.current = { ...saved.setLogs, ...setLogsRef.current };
+        setSetLogs(setLogsRef.current);
+      }
       if (saved.done?.length) {
         setDone((prev) => {
           const next = new Set(prev);
@@ -75,21 +92,34 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
   }, [storageKey]);
   useEffect(() => {
     try {
-      localStorage.setItem(storageKey, JSON.stringify({ done: Array.from(done), reps, weights }));
+      localStorage.setItem(storageKey, JSON.stringify({ done: Array.from(done), reps, weights, setLogs }));
     } catch {
       /* storage full/unavailable — non-fatal */
     }
-  }, [done, reps, weights, storageKey]);
+  }, [done, reps, weights, setLogs, storageKey]);
 
   async function getLogId(): Promise<string> {
     if (!logIdRef.current) logIdRef.current = await ensureWorkoutLog(dayId);
     return logIdRef.current;
   }
 
-  const totalRepsLogged = () =>
+  /** Record the actual result of one finished set (reps or seconds + weight). */
+  function logSet(exId: string, setIdx: number, entry: SetEntry) {
+    const arr = [...(setLogsRef.current[exId] ?? [])];
+    arr[setIdx] = entry;
+    setLogsRef.current = { ...setLogsRef.current, [exId]: arr };
+    setSetLogs(setLogsRef.current);
+  }
+
+  // Actual reps where the user tracked them, target reps as the fallback
+  // (e.g. "Mark Complete" without stepping through sets).
+  const totalRepsLogged = (doneSet: Set<string>) =>
     exercises.reduce((acc, e) => {
-      if (!done.has(e.id) || e.doseType !== "reps") return acc;
-      return acc + e.sets * (e.repsMax ?? 10);
+      if (!doneSet.has(e.id) || e.doseType !== "reps") return acc;
+      const logged = setLogsRef.current[e.id] ?? [];
+      let sum = 0;
+      for (let i = 0; i < e.sets; i++) sum += logged[i]?.reps ?? e.repsMax ?? 10;
+      return acc + sum;
     }, 0);
 
   function toggleDone(e: PlayerExercise) {
@@ -102,7 +132,12 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
     startTransition(async () => {
       const logId = await getLogId();
       const weight = weights[e.id] ?? undefined;
-      const setsCompleted = Array.from({ length: e.sets }, () => {
+      const logged = setLogsRef.current[e.id] ?? [];
+      const setsCompleted = Array.from({ length: e.sets }, (_, i) => {
+        const actual = logged[i];
+        if (actual && (actual.reps != null || actual.seconds != null)) {
+          return weight != null && actual.weight == null ? { ...actual, weight } : actual;
+        }
         const base = e.doseType === "reps" ? { reps: e.repsMax ?? 10 } : { seconds: e.seconds ?? 30 };
         return weight != null ? { ...base, weight } : base;
       });
@@ -112,13 +147,14 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
       if (marking && allDone) {
         const now = new Date();
         const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-        const res = await completeWorkout(logId, localDate, now.getHours(), totalRepsLogged() + (e.doseType === "reps" ? 0 : 0));
+        const totalReps = totalRepsLogged(next);
+        const res = await completeWorkout(logId, localDate, now.getHours(), totalReps);
         try {
           localStorage.removeItem(storageKey); // workout finished — clear checkpoint
         } catch {}
         setCelebrate({
           badges: res.newBadges,
-          reps: totalRepsLogged(),
+          reps: totalReps,
           minutes: Math.max(1, Math.round((Date.now() - startedAtRef.current) / 60000)),
           exercises: required.length,
         });
@@ -180,9 +216,18 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
               isDone={done.has(e.id)}
               repState={reps[e.id] ?? { rep: 0, set: 1 }}
               weight={weights[e.id]}
+              logged={setLogs[e.id] ?? []}
               onToggleOpen={() => setOpenId(openId === e.id ? null : e.id)}
               onRep={(rep, set) => setReps((p) => ({ ...p, [e.id]: { rep, set } }))}
-              onWeight={(w) => setWeights((p) => ({ ...p, [e.id]: w }))}
+              onWeight={(w) =>
+                setWeights((p) => {
+                  const n = { ...p };
+                  if (w == null) delete n[e.id];
+                  else n[e.id] = w;
+                  return n;
+                })
+              }
+              onLogSet={(setIdx, entry) => logSet(e.id, setIdx, entry)}
               onComplete={() => toggleDone(e)}
               onAutoComplete={() => {
                 if (!done.has(e.id)) toggleDone(e);
@@ -209,9 +254,11 @@ function ExerciseRow({
   isDone,
   repState,
   weight,
+  logged,
   onToggleOpen,
   onRep,
   onWeight,
+  onLogSet,
   onComplete,
   onAutoComplete,
 }: {
@@ -221,9 +268,11 @@ function ExerciseRow({
   isDone: boolean;
   repState: { rep: number; set: number };
   weight: number | undefined;
+  logged: SetEntry[];
   onToggleOpen: () => void;
   onRep: (rep: number, set: number) => void;
-  onWeight: (w: number) => void;
+  onWeight: (w: number | null) => void;
+  onLogSet: (setIdx: number, entry: SetEntry) => void;
   onComplete: () => void;
   onAutoComplete: () => void;
 }) {
@@ -264,9 +313,9 @@ function ExerciseRow({
           <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 12, opacity: open ? 1 : 0, transition: "opacity .3s ease" }}>
             <ExerciseDemo pattern={e.pattern} animate={open} caption={e.formCue ? undefined : undefined} />
             {e.doseType === "reps" ? (
-              <RepTracker sets={e.sets} target={e.repsMax ?? 10} state={repState} isDone={isDone} weight={weight} equipment={e.equipment} onChange={onRep} onWeight={onWeight} onFinishAll={onAutoComplete} />
+              <RepTracker sets={e.sets} target={e.repsMax ?? 10} state={repState} isDone={isDone} weight={weight} logged={logged} equipment={e.equipment} onChange={onRep} onWeight={onWeight} onLogSet={onLogSet} onFinishAll={onAutoComplete} />
             ) : (
-              <Timer seconds={e.seconds ?? 30} sets={e.sets} state={repState} isDone={isDone} weight={weight} equipment={e.equipment} onChange={onRep} onWeight={onWeight} onFinishAll={onAutoComplete} />
+              <Timer seconds={e.seconds ?? 30} sets={e.sets} state={repState} isDone={isDone} weight={weight} equipment={e.equipment} onChange={onRep} onWeight={onWeight} onLogSet={onLogSet} onFinishAll={onAutoComplete} />
             )}
             {e.formCue && (
               <div style={infoBlock("blue")}>
@@ -331,9 +380,11 @@ function RepTracker({
   state,
   isDone,
   weight,
+  logged,
   equipment,
   onChange,
   onWeight,
+  onLogSet,
   onFinishAll,
 }: {
   sets: number;
@@ -341,19 +392,31 @@ function RepTracker({
   state: { rep: number; set: number };
   isDone: boolean;
   weight: number | undefined;
+  logged: SetEntry[];
   equipment: string;
   onChange: (rep: number, set: number) => void;
-  onWeight: (w: number) => void;
+  onWeight: (w: number | null) => void;
+  onLogSet: (setIdx: number, entry: SetEntry) => void;
   onFinishAll: () => void;
 }) {
+  // A set is logged the moment it ends — with the rep count it actually
+  // ended at and the weight in effect right then (so changing the weight
+  // between sets records a real per-set load, e.g. pyramid sets).
+  const logCurrentSet = (actualReps: number) =>
+    onLogSet(state.set - 1, weight != null ? { reps: actualReps, weight } : { reps: actualReps });
+
   const inc = () => {
     if (state.rep + 1 >= target && state.set >= sets) {
       // Final rep of the final set: light the last dot and complete the exercise
       onChange(target, sets);
-      if (state.rep + 1 === target) onFinishAll();
+      if (state.rep + 1 === target) {
+        logCurrentSet(target);
+        onFinishAll();
+      }
       return;
     }
     if (state.rep + 1 > target) {
+      logCurrentSet(target);
       onChange(0, state.set + 1);
     } else onChange(state.rep + 1, state.set);
   };
@@ -362,6 +425,15 @@ function RepTracker({
       if (state.set > 1) onChange(target, state.set - 1);
     } else onChange(state.rep - 1, state.set);
   };
+  // Cut the set short at the current count: log the actual reps and move on.
+  const finishSetEarly = () => {
+    logCurrentSet(state.rep);
+    if (state.set >= sets) {
+      onChange(state.rep, sets);
+      onFinishAll();
+    } else onChange(0, state.set + 1);
+  };
+  const loggedReps = Array.from({ length: sets }, (_, i) => logged[i]?.reps).filter((r): r is number => r != null);
   return (
     <div style={{ background: "var(--bg-elev)", borderRadius: 14, padding: 14, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
       <SetDots sets={sets} state={state} isDone={isDone} target={target} />
@@ -374,7 +446,26 @@ function RepTracker({
       </div>
       <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-dim)", fontVariantNumeric: "tabular-nums" }}>
         Set {state.set} of {sets}
+        {loggedReps.length > 0 && (
+          <span style={{ color: "var(--ink-faint)" }}> · logged {loggedReps.join(" · ")}</span>
+        )}
       </div>
+      {!isDone && state.rep > 0 && state.rep < target && (
+        <button
+          onClick={finishSetEarly}
+          style={{
+            fontSize: 13,
+            fontWeight: 700,
+            color: "var(--blue)",
+            background: "rgba(61,139,253,0.12)",
+            borderRadius: 999,
+            padding: "7px 16px",
+            transition: "transform .15s ease, background .15s ease",
+          }}
+        >
+          {state.set >= sets ? `Finish at ${state.rep} reps` : `Log set — ${state.rep} reps`}
+        </button>
+      )}
       {equipment !== "none" && (
         <input
           type="number"
@@ -382,7 +473,7 @@ function RepTracker({
           value={weight ?? ""}
           onChange={(e) => {
             const val = parseFloat(e.target.value);
-            if (!isNaN(val)) onWeight(val);
+            onWeight(isNaN(val) ? null : val);
           }}
           style={{
             width: "100%",
@@ -411,6 +502,7 @@ function Timer({
   equipment,
   onChange,
   onWeight,
+  onLogSet,
   onFinishAll,
 }: {
   seconds: number;
@@ -420,7 +512,8 @@ function Timer({
   weight: number | undefined;
   equipment: string;
   onChange: (rep: number, set: number) => void;
-  onWeight: (w: number) => void;
+  onWeight: (w: number | null) => void;
+  onLogSet: (setIdx: number, entry: SetEntry) => void;
   onFinishAll: () => void;
 }) {
   const [left, setLeft] = useState(seconds);
@@ -434,6 +527,7 @@ function Timer({
       setLeft(remain);
       if (remain === 0) {
         setRunning(false);
+        onLogSet(state.set - 1, weight != null ? { seconds, weight } : { seconds });
         if (state.set < sets) {
           onChange(0, state.set + 1);
           setLeft(seconds);
@@ -444,7 +538,7 @@ function Timer({
       }
     }, 250);
     return () => clearInterval(iv);
-  }, [running, seconds, sets, state.set, onChange, onFinishAll]);
+  }, [running, seconds, sets, state.set, weight, onChange, onLogSet, onFinishAll]);
 
   return (
     <div style={{ background: "var(--bg-elev)", borderRadius: 14, padding: 14, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
@@ -480,7 +574,7 @@ function Timer({
           value={weight ?? ""}
           onChange={(e) => {
             const val = parseFloat(e.target.value);
-            if (!isNaN(val)) onWeight(val);
+            onWeight(isNaN(val) ? null : val);
           }}
           style={{
             width: "100%",

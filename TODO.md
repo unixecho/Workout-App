@@ -1,5 +1,32 @@
 # TODO
 
+## Done (2026-07-12, second session)
+
+- [x] **Enhanced rep tracking** — the Workout Player now logs what actually
+      happened per set, not the plan defaults: each set records its real rep
+      count and the weight in effect when it ended (so changing the weight
+      between sets captures pyramid loading). New "Log set — N reps" /
+      "Finish at N reps" pill cuts a set short at the current count; a
+      "logged 12 · 10 · 8" line shows the history; timers log {seconds,
+      weight} per completed set. All of it checkpoints to localStorage and
+      restores after refresh. Untracked exercises ("Mark Complete" straight
+      away) still fall back to target values. Also fixed: the final
+      exercise's reps were excluded from the completion total (stale state
+      read), and the weight field couldn't be cleared once typed.
+- [x] **Full gym machine library (migration 0017) — applied to Frankfurt
+      prod**: 22 exercises covering the rest of a commercial gym floor —
+      smith machine (squat/bench), landmine press, lying leg curl, hip
+      abduction/adduction, seated calf, glute kickback, seated row machine,
+      t-bar row, reverse pec deck, lateral raise machine, preacher curl,
+      seated dip machine, assisted dip, ab crunch, torso rotation, roman
+      chair leg raise, cable lateral raise, straight-arm pulldown, overhead
+      triceps extension, cable pull-through. 7 new hand-authored demo
+      patterns (abduction, adduction, reversefly, kickback, pullover,
+      overheadext, seatedcalf). Library now 105 exercises.
+- [x] **Migrations 0015 + 0016 applied to Frankfurt prod** (0015 is
+      documentation-only; 0016's 6 weight badges verified live). Applied via
+      service-role upserts — the SQL files and prod are in sync.
+
 ## Done (2026-07-12)
 
 - [x] **Migration 0014 (full-gym library expansion) applied to Frankfurt prod**:
@@ -198,8 +225,6 @@
       (NOT pushed, per owner). Infra + first translated surfaces done;
       remaining: extract the rest of the screens, RTL audit, exercise-name
       translations (DB strategy documented in docs/I18N.md on the branch)
-- [ ] **Full gym machine library** — cover every machine you can find at a
-      gym (expansions beyond the current 26 new exercises in migration 0014)
 - [ ] Delete the old Sydney Supabase project now that the redirect-URL fix
       is confirmed live (see Done) — do this once a real sign-in has been
       tested end-to-end on Frankfurt (test accounts don't carry over —
