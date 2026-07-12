@@ -15,3 +15,7 @@
 -- - "milestone_loading": max(weight) >= threshold on an exercise (e.g., 300 lbs deadlift)
 -- - "total_daily_loading": sum of (reps × weight) across all weighted exercises
 -- - "loading_progression": max weight on an exercise increased from last 7 days
+
+-- Schema documentation migration (no DDL changes — application handles weight in jsonb).
+
+select 1; -- No-op: documentation only.

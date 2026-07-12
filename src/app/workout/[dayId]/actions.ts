@@ -195,6 +195,7 @@ export async function completeWorkout(
         if (rule.exercise && rule.exercise !== "any") {
           return (maxLoadByExercise[rule.exercise] ?? 0) >= Number(t);
         }
+        // If no specific exercise or exercise is "any", check any single lift
         return maxLoadingToday >= Number(t);
       case "total_daily_loading":
         return totalLoadingToday >= Number(t);
