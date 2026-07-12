@@ -5,7 +5,36 @@ should read this first, then CLAUDE.md, then docs/FD.md.
 
 ---
 
-## 2026-07-11 (latest) — Drag-to-reorder, gym expansion, Hebrew groundwork
+## 2026-07-12 (latest) — Weight per set + badges, Stats PRs
+
+**TL;DR**: weight per set MVP shipped ✓ | weight-based badges defined + evaluated ✓ | Stats PRs display added ✓ | migration 0015 + 0016 ready to apply ✓
+
+**Weight per set logging** — fully functional MVP:
+- **Migration 0015**: schema documentation (weight-per-set storage as `{reps/seconds, weight}` in `sets_completed`).
+- **Workout Player UI**: weight input field added to RepTracker and Timer (only for equipped exercises, not warmups/bodyweight).
+- **Data persistence**: weight state tracked in component + checkpoint saved to localStorage across session suspends.
+- **Backend**: `setExerciseLogged` now accepts structured set data `{reps?, seconds?, weight?}[]` and stores directly in jsonb.
+
+**Weight-based badge rules** (migration 0016):
+- Added 6 new badges: Loaded 300/500 (any exercise), Daily 1000 (total loading), Plate Loaded (405+ lb deadlift), Squatter (300+ lb squat), Bencher (225+ lb bench).
+- `completeWorkout` now aggregates weight from exercise logs: computes `maxLoadingToday`, `totalLoadingToday`, and per-exercise max weight.
+- Badge rule evaluator handles `milestone_loading` (max weight on exercise ± specific exercise filter) and `total_daily_loading` (sum of reps × weight).
+
+**Stats UI** — per-exercise personal records:
+- Stats page queries exercise logs with exercise names; computes max weight per exercise.
+- New "Personal Records" section in StatsScreen displays top 5 by max weight.
+- Shows formatted weight in kg; integrates after Muscle Balance section.
+
+**Note on rep tracking**: currently logs default reps/seconds per set (e.g., `e.repsMax`), not actual user input. Capturing per-set actuals is future work — infrastructure is in place (weight works perfectly), just needs a UI step to log reps-per-set (not just current rep state).
+
+**Next session**: 
+- ⚠️ **Apply migrations 0015 + 0016 to Frankfurt** — `migrations/0015_weight_per_set.sql` is documentation only (no DDL), `0016_weight_badges.sql` inserts 6 new badge rows. Both safe to apply.
+- Optional: enhanced rep tracking (capture actual reps per set, not defaults); loading progression graphs (weight over time).
+- Hebrew locale is still pending on `i18n-hebrew` branch (owner call on priority).
+
+---
+
+## 2026-07-11 — Drag-to-reorder, gym expansion, Hebrew groundwork
 
 **TL;DR**: drag-to-reorder shipped and live ✓ | gym expansion code deployed (migration 0014 needs manual SQL run) ✓ | hebrew locale infra done, unpushed ✓
 
