@@ -35,7 +35,7 @@ export default async function StatsPage() {
     supabase.from("weigh_ins").select("weight_kg, logged_at").eq("user_id", user.id).order("logged_at"),
     supabase
       .from("exercise_logs")
-      .select("sets_completed, exercises(slug, name, muscle_groups), workout_logs!inner(user_id, status)")
+      .select("sets_completed, exercises(slug, name, muscle_groups), workout_logs!inner(user_id, status, started_at)")
       .eq("workout_logs.user_id", user.id)
       .eq("workout_logs.status", "complete")
       .eq("removed", false),
@@ -61,8 +61,11 @@ export default async function StatsPage() {
 
   const balance: Record<string, number> = {};
   const exercisePRs: Array<{ name: string; weight: number }> = [];
+  // slug → per-session top weight, keyed by workout start time
+  const bySlug = new Map<string, { name: string; sessions: Map<string, number> }>();
   for (const l of exLogs ?? []) {
     const exercise = l.exercises as unknown as { slug: string; name: string; muscle_groups: string[] };
+    const log = l.workout_logs as unknown as { started_at: string };
     const muscles = exercise?.muscle_groups ?? [];
     const sets = Array.isArray(l.sets_completed) ? l.sets_completed.length : 1;
     for (const m of muscles) {
@@ -71,9 +74,11 @@ export default async function StatsPage() {
     }
     // Per-exercise PRs: max weight logged
     if (Array.isArray(l.sets_completed)) {
+      let topSet = 0;
       for (const set of l.sets_completed) {
         const weight = typeof set === "number" ? 0 : (set?.weight ?? 0);
         if (weight > 0) {
+          topSet = Math.max(topSet, weight);
           const existing = exercisePRs.find((p) => p.name === exercise?.name);
           if (existing) {
             existing.weight = Math.max(existing.weight, weight);
@@ -82,11 +87,32 @@ export default async function StatsPage() {
           }
         }
       }
+      if (topSet > 0 && exercise?.slug && log?.started_at) {
+        let entry = bySlug.get(exercise.slug);
+        if (!entry) {
+          entry = { name: exercise.name, sessions: new Map() };
+          bySlug.set(exercise.slug, entry);
+        }
+        entry.sessions.set(log.started_at, Math.max(entry.sessions.get(log.started_at) ?? 0, topSet));
+      }
     }
   }
   const topPRs = exercisePRs
     .sort((a, b) => b.weight - a.weight)
     .slice(0, 5);
+
+  // Loading progression: exercises with ≥2 weighted sessions, heaviest first
+  const progression = [...bySlug.entries()]
+    .map(([slug, { name, sessions }]) => ({
+      slug,
+      name,
+      points: [...sessions.entries()]
+        .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
+        .map(([at, weight]) => ({ at, weight })),
+    }))
+    .filter((e) => e.points.length >= 2)
+    .sort((a, b) => Math.max(...b.points.map((p) => p.weight)) - Math.max(...a.points.map((p) => p.weight)))
+    .slice(0, 6);
 
   // History with day titles
   const dayTitles = new Map((plan?.days ?? []).map((d) => [d.id, d.session_title ?? "Workout"]));
@@ -111,6 +137,7 @@ export default async function StatsPage() {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)}
       prs={topPRs}
+      progression={progression}
       badges={{ earned: badgesEarned ?? 0, total: badgesTotal ?? 0 }}
       history={completed.slice(0, 8).map((l) => ({
         title: dayTitles.get(l.plan_day_id) ?? "Workout",

@@ -19,6 +19,7 @@ interface Props {
   totals: { workouts: number; minutes: number; reps: number };
   balance: [string, number][];
   prs: Array<{ name: string; weight: number }>;
+  progression: Array<{ slug: string; name: string; points: { at: string; weight: number }[] }>;
   badges: { earned: number; total: number };
   history: { title: string; date: string; minutes: number }[];
 }
@@ -140,6 +141,9 @@ export function StatsScreen(p: Props) {
           </div>
         )}
 
+        {/* Loading progression */}
+        {p.progression.length > 0 && <ProgressionCard series={p.progression} />}
+
         {/* Personal Records */}
         {p.prs.length > 0 && (
           <div style={card()}>
@@ -209,6 +213,162 @@ export function StatsScreen(p: Props) {
       </Sheet>
     </main>
   );
+}
+
+function ProgressionCard({ series }: { series: Props["progression"] }) {
+  const [slug, setSlug] = useState(series[0].slug);
+  const active = series.find((s) => s.slug === slug) ?? series[0];
+  const pts = active.points;
+  const delta = pts[pts.length - 1].weight - pts[0].weight;
+
+  return (
+    <div style={card()}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 4 }}>
+        <div style={{ fontSize: 15, fontWeight: 700 }}>Loading progression</div>
+        <span
+          style={{
+            fontSize: 13,
+            fontWeight: 700,
+            fontVariantNumeric: "tabular-nums",
+            color: delta > 0 ? "var(--green)" : "var(--ink-dim)",
+          }}
+        >
+          {delta > 0 ? "+" : ""}
+          {formatKg(delta)} kg
+        </span>
+      </div>
+      <div style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-faint)", marginBottom: 12 }}>
+        Top set per session
+      </div>
+
+      {/* Exercise picker chips */}
+      <div style={{ display: "flex", gap: 8, overflowX: "auto", margin: "0 -16px 14px", padding: "0 16px 2px" }}>
+        {series.map((s) => {
+          const on = s.slug === active.slug;
+          return (
+            <button
+              key={s.slug}
+              className="press"
+              onClick={() => setSlug(s.slug)}
+              style={{
+                flexShrink: 0,
+                padding: "7px 13px",
+                borderRadius: "var(--radius-pill)",
+                fontSize: 13,
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+                background: on ? "rgba(61,139,253,0.18)" : "var(--fill-resting)",
+                color: on ? "var(--blue)" : "var(--ink-dim)",
+                boxShadow: on ? "inset 0 0 0 1px rgba(61,139,253,0.45)" : "none",
+                transition: "background .18s ease, color .18s ease, box-shadow .18s ease",
+              }}
+            >
+              {s.name}
+            </button>
+          );
+        })}
+      </div>
+
+      <ProgressionChart key={active.slug} points={pts} />
+
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-faint)" }}>{shortDate(pts[0].at)}</span>
+        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-faint)", fontVariantNumeric: "tabular-nums" }}>
+          {pts.length} sessions
+        </span>
+        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-faint)" }}>{shortDate(pts[pts.length - 1].at)}</span>
+      </div>
+    </div>
+  );
+}
+
+function ProgressionChart({ points }: { points: { at: string; weight: number }[] }) {
+  const W = 320;
+  const H = 118;
+  const PAD_T = 22; // room for the PR label
+  const PAD_B = 8;
+  const PAD_X = 8;
+
+  const weights = points.map((p) => p.weight);
+  const rawMin = Math.min(...weights);
+  const rawMax = Math.max(...weights);
+  const pad = Math.max(2.5, (rawMax - rawMin) * 0.18);
+  const min = rawMin - pad;
+  const max = rawMax + pad;
+
+  const x = (i: number) => (points.length === 1 ? W / 2 : PAD_X + (i / (points.length - 1)) * (W - 2 * PAD_X));
+  const y = (v: number) => PAD_T + (1 - (v - min) / (max - min)) * (H - PAD_T - PAD_B);
+
+  const prIdx = weights.indexOf(rawMax);
+  // Keep the PR label inside the viewBox near the edges
+  const prLabelX = Math.min(Math.max(x(prIdx), 34), W - 34);
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
+      {/* gridlines */}
+      {[0.25, 0.55, 0.85].map((f) => (
+        <line key={f} x1={0} x2={W} y1={PAD_T + f * (H - PAD_T - PAD_B)} y2={PAD_T + f * (H - PAD_T - PAD_B)} stroke="var(--hairline)" strokeWidth={1} />
+      ))}
+
+      {/* area fill under the line */}
+      <polygon
+        points={`${points.map((p, i) => `${x(i)},${y(p.weight)}`).join(" ")} ${x(points.length - 1)},${H} ${x(0)},${H}`}
+        fill="rgba(61,139,253,0.10)"
+        style={{ animation: "chart-fade .7s ease .35s backwards" }}
+      />
+
+      {/* the line, drawn in */}
+      <polyline
+        points={points.map((p, i) => `${x(i)},${y(p.weight)}`).join(" ")}
+        fill="none"
+        stroke="var(--blue)"
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        pathLength={1}
+        strokeDasharray={1}
+        style={{ animation: "chart-draw .9s var(--ease-structural) forwards" }}
+      />
+
+      {/* session dots, staggered in */}
+      {points.map((p, i) => (
+        <circle
+          key={i}
+          cx={x(i)}
+          cy={y(p.weight)}
+          r={i === prIdx ? 4.5 : 3}
+          fill={i === prIdx ? "var(--amber)" : "var(--blue)"}
+          stroke="var(--card)"
+          strokeWidth={1.5}
+          style={{
+            transformBox: "fill-box",
+            transformOrigin: "center",
+            animation: `chart-dot .35s var(--ease-structural) ${0.15 + (i / points.length) * 0.7}s backwards`,
+          }}
+        />
+      ))}
+
+      {/* PR label */}
+      <text
+        x={prLabelX}
+        y={y(rawMax) - 10}
+        textAnchor="middle"
+        fill="var(--amber)"
+        style={{ fontSize: 11, fontWeight: 700, fontVariantNumeric: "tabular-nums", animation: "chart-fade .5s ease .75s backwards" }}
+      >
+        PR {formatKg(rawMax)} kg
+      </text>
+    </svg>
+  );
+}
+
+function formatKg(v: number) {
+  const rounded = Math.round(v * 2) / 2; // logged weights step in 0.5 kg
+  return rounded % 1 === 0 ? String(Math.round(rounded)) : rounded.toFixed(1);
+}
+
+function shortDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 function WeightSpark({ data, goal }: { data: number[]; goal: number | null }) {

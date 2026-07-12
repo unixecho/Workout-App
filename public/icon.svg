@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- RepUp app icon source. PNGs in /public are generated from this file
+       by scripts/icons.mjs — edit here, then `node scripts/icons.mjs`. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a2029"/>
+      <stop offset="1" stop-color="#0a0d12"/>
+    </linearGradient>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5aa0ff"/>
+      <stop offset="1" stop-color="#2f78e8"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <ellipse cx="256" cy="96" rx="310" ry="210" fill="#3d8bfd" opacity="0.14"/>
+  <g id="glyph" transform="rotate(-14 256 256)">
+    <!-- bar -->
+    <rect x="88" y="243" width="336" height="26" rx="13" fill="#f2f4f7"/>
+    <!-- outer plates (smaller) -->
+    <rect x="104" y="204" width="30" height="104" rx="13" fill="#5aa0ff"/>
+    <rect x="378" y="204" width="30" height="104" rx="13" fill="#5aa0ff"/>
+    <!-- inner plates (bigger) -->
+    <rect x="142" y="178" width="44" height="156" rx="16" fill="url(#plate)"/>
+    <rect x="326" y="178" width="44" height="156" rx="16" fill="url(#plate)"/>
+  </g>
+</svg>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { StatSlider } from "@/components/StatSlider";
+import { AuthHandoff } from "@/components/onboarding/AuthHandoff";
 import { completeOnboarding } from "@/app/onboarding/actions";
 import { generateWeek, type Equipment, type Goal } from "@/lib/plan/generate";
 
@@ -96,6 +97,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
   // S0
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [authExplain, setAuthExplain] = useState(false);
 
   // S1
   const [avatarTint, setAvatarTint] = useState(0);
@@ -447,10 +449,10 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
             transition: `opacity .6s ${EASE} .15s`,
           }}
         >
-          {authError && (
+          {authError && !authExplain && (
             <div style={{ fontSize: 13, fontWeight: 500, color: "var(--red)", textAlign: "center" }}>{authError}</div>
           )}
-          <PrimaryTintButton onClick={handleGoogleSignIn} disabled={authBusy}>
+          <PrimaryTintButton onClick={() => setAuthExplain(true)} disabled={authBusy}>
             <span
               style={{
                 width: 20,
@@ -470,6 +472,18 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
           </PrimaryTintButton>
         </div>
       </Screen>
+
+      {/* Pre-OAuth explainer — hands off to Google from its own CTA */}
+      <AuthHandoff
+        open={authExplain}
+        busy={authBusy}
+        error={authError}
+        onContinue={handleGoogleSignIn}
+        onClose={() => {
+          setAuthExplain(false);
+          setAuthError(null);
+        }}
+      />
 
       {/* S1 — Profile */}
       <Screen style={screenStyle(1)}>

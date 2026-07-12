@@ -212,6 +212,95 @@ input[type="range"].stat-slider:active::-moz-range-thumb {
   animation: none;
 }
 
+/* Stats — loading progression chart */
+@keyframes chart-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes chart-dot {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes chart-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Pre-OAuth handoff interstitial */
+@keyframes handoff-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes handoff-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes handoff-dot {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  35% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Generic haptic-feeling tap state for chips/small buttons. */
+.press {
+  transition:
+    transform 0.12s var(--ease-structural),
+    filter 0.12s ease;
+}
+.press:active {
+  transform: scale(0.96);
+  filter: brightness(1.18);
+}
+
 @keyframes pulseSkeleton {
   0%,
   100% {
