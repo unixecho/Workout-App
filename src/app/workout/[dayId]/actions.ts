@@ -64,6 +64,7 @@ export async function setExerciseLogged(
 interface BadgeRule {
   type: string;
   threshold?: number | string;
+  exercise?: string;
 }
 
 /**
@@ -145,6 +146,28 @@ export async function completeWorkout(
   const cumReps = (sums ?? []).reduce((a, r) => a + (r.total_reps ?? 0), 0);
   const cumMinutes = Math.round((sums ?? []).reduce((a, r) => a + (r.duration_seconds ?? 0), 0) / 60);
 
+  // Weight-based aggregates for today's session
+  const { data: todayLogs } = await supabase
+    .from("exercise_logs")
+    .select("sets_completed, exercises(slug)")
+    .eq("workout_log_id", workoutLogId);
+  let maxLoadingToday = 0;
+  let totalLoadingToday = 0;
+  const maxLoadByExercise: Record<string, number> = {};
+  for (const log of todayLogs ?? []) {
+    const sets = log.sets_completed as Array<{ reps?: number; seconds?: number; weight?: number } | number>;
+    const exerciseSlug = (log.exercises as { slug: string } | null)?.slug ?? "";
+    for (const set of sets) {
+      const weight = typeof set === "number" ? 0 : (set.weight ?? 0);
+      const reps = typeof set === "number" ? set : (set.reps ?? 1);
+      maxLoadingToday = Math.max(maxLoadingToday, weight);
+      totalLoadingToday += weight * reps;
+      if (weight > 0) {
+        maxLoadByExercise[exerciseSlug] = Math.max(maxLoadByExercise[exerciseSlug] ?? 0, weight);
+      }
+    }
+  }
+
   const { data: catalog } = await supabase.from("badges").select("id, key, name, description, unlock_rule");
   const { data: mine } = await supabase
     .from("user_badges")
@@ -167,6 +190,14 @@ export async function completeWorkout(
         return localStartHour < parseInt(String(t), 10);
       case "session_time_after":
         return localStartHour >= parseInt(String(t), 10);
+      case "milestone_loading":
+        // Check if any exercise (or a specific one) reached weight threshold
+        if (rule.exercise && rule.exercise !== "any") {
+          return (maxLoadByExercise[rule.exercise] ?? 0) >= Number(t);
+        }
+        return maxLoadingToday >= Number(t);
+      case "total_daily_loading":
+        return totalLoadingToday >= Number(t);
       default:
         return false; // full_week / comeback / goal / social / perfect_form: later pass
     }
