@@ -116,4 +116,13 @@ insert into exercises (slug, name, muscle_groups, equipment, difficulty, demo_ke
 ('db-hammer-curl', 'Hammer Curl', '{Biceps,Arms}', 'basic', 1, '{"pattern":"curl"}',
  'Palms facing each other; curl without swinging, control the lowering.',
  '{"Swinging the hips","Elbows drifting forward","Rushing the negative"}',
- '{"elbow": {"note": "Lighter weight, stop short of full extension.", "avoid": false}, "wrist": {"note": "The neutral grip is wrist-friendly — keep it locked, don''t let it flex.", "avoid": false}}');
+ '{"elbow": {"note": "Lighter weight, stop short of full extension.", "avoid": false}, "wrist": {"note": "The neutral grip is wrist-friendly — keep it locked, don''t let it flex.", "avoid": false}}')
+on conflict (slug) do update set
+  name = excluded.name,
+  muscle_groups = excluded.muscle_groups,
+  equipment = excluded.equipment,
+  difficulty = excluded.difficulty,
+  demo_keyframes = excluded.demo_keyframes,
+  form_cues = excluded.form_cues,
+  common_mistakes = excluded.common_mistakes,
+  adaptations = excluded.adaptations;
