@@ -35,7 +35,7 @@ export default async function StatsPage() {
     supabase.from("weigh_ins").select("weight_kg, logged_at").eq("user_id", user.id).order("logged_at"),
     supabase
       .from("exercise_logs")
-      .select("sets_completed, exercises(muscle_groups), workout_logs!inner(user_id, status)")
+      .select("sets_completed, exercises(slug, name, muscle_groups), workout_logs!inner(user_id, status)")
       .eq("workout_logs.user_id", user.id)
       .eq("workout_logs.status", "complete")
       .eq("removed", false),
@@ -60,14 +60,33 @@ export default async function StatsPage() {
   }
 
   const balance: Record<string, number> = {};
+  const exercisePRs: Array<{ name: string; weight: number }> = [];
   for (const l of exLogs ?? []) {
-    const muscles = (l.exercises as unknown as { muscle_groups: string[] })?.muscle_groups ?? [];
+    const exercise = l.exercises as unknown as { slug: string; name: string; muscle_groups: string[] };
+    const muscles = exercise?.muscle_groups ?? [];
     const sets = Array.isArray(l.sets_completed) ? l.sets_completed.length : 1;
     for (const m of muscles) {
       if (m === "Mobility" || m === "Warmup") continue;
       balance[m] = (balance[m] ?? 0) + sets;
     }
+    // Per-exercise PRs: max weight logged
+    if (Array.isArray(l.sets_completed)) {
+      for (const set of l.sets_completed) {
+        const weight = typeof set === "number" ? 0 : (set?.weight ?? 0);
+        if (weight > 0) {
+          const existing = exercisePRs.find((p) => p.name === exercise?.name);
+          if (existing) {
+            existing.weight = Math.max(existing.weight, weight);
+          } else {
+            exercisePRs.push({ name: exercise?.name ?? "Unknown", weight });
+          }
+        }
+      }
+    }
   }
+  const topPRs = exercisePRs
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, 5);
 
   // History with day titles
   const dayTitles = new Map((plan?.days ?? []).map((d) => [d.id, d.session_title ?? "Workout"]));
@@ -91,6 +110,7 @@ export default async function StatsPage() {
       balance={Object.entries(balance)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)}
+      prs={topPRs}
       badges={{ earned: badgesEarned ?? 0, total: badgesTotal ?? 0 }}
       history={completed.slice(0, 8).map((l) => ({
         title: dayTitles.get(l.plan_day_id) ?? "Workout",

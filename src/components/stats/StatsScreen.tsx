@@ -18,6 +18,7 @@ interface Props {
   targetWeightKg: number | null;
   totals: { workouts: number; minutes: number; reps: number };
   balance: [string, number][];
+  prs: Array<{ name: string; weight: number }>;
   badges: { earned: number; total: number };
   history: { title: string; date: string; minutes: number }[];
 }
@@ -133,6 +134,21 @@ export function StatsScreen(p: Props) {
                     <div style={{ width: `${(sets / maxBalance) * 100}%`, height: "100%", borderRadius: 999, background: "var(--blue)" }} />
                   </div>
                   <span style={{ width: 26, textAlign: "right", fontSize: 12.5, fontWeight: 600, color: "var(--ink-faint)", fontVariantNumeric: "tabular-nums" }}>{sets}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Personal Records */}
+        {p.prs.length > 0 && (
+          <div style={card()}>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>Personal records</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {p.prs.map(({ name, weight }) => (
+                <div key={name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 600 }}>{name}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "var(--blue)", fontVariantNumeric: "tabular-nums" }}>{Math.round(weight)} kg</span>
                 </div>
               ))}
             </div>

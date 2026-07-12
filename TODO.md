@@ -181,15 +181,23 @@
 - [x] Branded workout loader (barbell draw-in + squatting figure + RepUp)
       and finish sequence (summary tiles → fade out to Plan)
 
+## In Progress (2026-07-12)
+
+- [ ] **Weight per set + badges** (Phase 1 done):
+  - [x] Migration 0015: schema documentation for weight-per-set storage
+  - [x] Workout Player: weight input UI in RepTracker/Timer for equipped exercises
+  - [x] Weight checkpoint persistence (localStorage)
+  - [x] Migration 0016: weight-based badge rules (Loaded 300/500, Daily 1000, Plate Loaded, Squatter, Bencher)
+  - [x] Badge evaluation: milestone_loading and total_daily_loading rules
+  - [ ] **Next: Stats UI** — per-exercise per-set PRs, loading progression graphs
+  - [ ] **Next: Enhanced rep tracking** — capture actual reps per set (currently logs defaults)
+
 ## Open
 
 - [ ] **Hebrew locale** — in progress on the local `i18n-hebrew` branch
       (NOT pushed, per owner). Infra + first translated surfaces done;
       remaining: extract the rest of the screens, RTL audit, exercise-name
       translations (DB strategy documented in docs/I18N.md on the branch)
-- [ ] **Weight per set + badges** — SQL applied. Schema in place; now need
-      player UI to log weight on each set, stats UI to show per-set PRs, and
-      weight-based badge rules (e.g. milestone loading for compound lifts)
 - [ ] **Full gym machine library** — cover every machine you can find at a
       gym (expansions beyond the current 26 new exercises in migration 0014)
 - [ ] Delete the old Sydney Supabase project now that the redirect-URL fix
