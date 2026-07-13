@@ -5,7 +5,66 @@ should read this first, then CLAUDE.md, then docs/FD.md.
 
 ---
 
-## 2026-07-12 (latest) — Enhanced rep tracking + machine library complete
+## 2026-07-13 (latest) — Progression graphs, PWA install, pre-OAuth explainer, Hebrew-first locale
+
+**TL;DR**: 4 owner asks shipped ✓ | progression charts on Stats ✓ | PWA
+manifest+icons ✓ | animated Google-handoff explainer ✓ | Hebrew locale
+phase A COMPLETE (all UI strings, RTL, Sunday-first weeks) ✓ | tsc +
+production build clean, preview-verified ✓
+
+**1. Loading progression** — Stats "Loading progression" card: top set per
+session per exercise as an animated SVG line chart (draw-in line, staggered
+dots, amber PR point + label, delta badge, exercise chips). Data: existing
+exercise_logs query now also pulls workout started_at; series built
+server-side (≥2 weighted sessions, top 6 by max weight).
+
+**2. PWA install** — src/app/manifest.ts + icon set in /public generated
+from public/icon.svg by scripts/icons.mjs (sharp devDep): 192/512,
+maskable (0.68 safe-zone), apple-touch-icon 180. Barbell-on-dark brand
+tile. Proxy matcher excludes manifest.webmanifest (an unauthenticated
+manifest fetch used to 307 to /onboarding → invalid manifest).
+
+**3. Pre-OAuth explainer** — new AuthHandoff overlay
+(src/components/onboarding/AuthHandoff.tsx): S0's Google button now opens
+an animated interstitial (RepUp→Google tiles with flowing dots, three
+trust cards: name+email only / no passwords / nothing posted) whose CTA
+actually starts signInWithOAuth. "Not now"/back dismiss with exit fade.
+Errors from /auth/callback still render on S0 (overlay closed on return).
+
+**4. Hebrew-first locale — phase A complete.** Owner decision: Israel is
+the home market. docs/I18N.md rewritten as the architecture (read it
+first): resolution = cookie > Accept-Language (`iw`→he) > he; typed
+dictionaries with tsc-enforced parity; impersonal/inclusive Hebrew
+register with masculine 3rd-person for friends' feed verbs (// GENDERED
+markers in he.ts); gym-loanword glossary; **Sunday-first display weeks
+over untouched Monday-first storage** (weekdayDisplayOrder — applied to
+Today strip, Plan list + month grid, onboarding + profile day pickers,
+plan reveal); formatDate/formatNumber (he-IL / en-GB) everywhere a date
+renders; RTL via logical properties + .dir-flip chevrons + deliberate LTR
+islands (charts, rep counter, timers, handle field). DB content (day
+titles, plan names, badge names/descriptions, muscle tags) translates via
+content maps with stored-text fallback — feed payloads included
+(feedItemFrom now takes locale; completeWorkout returns badge keys so the
+celebration translates). ALL screens extracted. The merge of the old
+i18n-hebrew branch came first (its infra was kept, then upgraded).
+
+**Verified**: tsc + production build clean; preview: he cookie → lang=he
+dir=rtl, Hebrew S0 + handoff dialog, back button at inline-start (right),
+clean console; no cookie + en browser → English LTR (negotiation works).
+Note: preview screenshots timed out (renderer hiccup) — verification used
+a11y snapshots + computed-geometry checks; authed tabs couldn't be walked
+in preview (no session) — structural checks only, on-device walkthrough
+listed in TODO.
+
+**Next session**:
+- Phase B: exercise_translations/badge_translations migrations + reader
+  wiring + first Hebrew content batch (docs/I18N.md §8).
+- Native-speaker review of he.ts (owner reads Hebrew — quick pass).
+- Owner: test add-to-home-screen on the phone (icon + standalone mode).
+
+---
+
+## 2026-07-12 — Enhanced rep tracking + machine library complete
 
 **TL;DR**: per-set actuals now logged (reps + weight per set) ✓ | 22 new
 machines live in prod (library = 105) ✓ | migrations 0015/0016/0017 ALL

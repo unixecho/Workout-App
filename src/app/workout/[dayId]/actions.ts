@@ -79,7 +79,7 @@ export async function completeWorkout(
   localDate: string, // YYYY-MM-DD on the user's device
   localStartHour: number,
   totalReps: number,
-): Promise<{ newBadges: { name: string; description: string }[] }> {
+): Promise<{ newBadges: { key: string; name: string; description: string }[] }> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -204,10 +204,10 @@ export async function completeWorkout(
     }
   };
 
-  const newBadges: { id: string; name: string; description: string }[] = [];
+  const newBadges: { id: string; key: string; name: string; description: string }[] = [];
   for (const b of catalog ?? []) {
     if (earned.has(b.id)) continue;
-    if (met(b.unlock_rule as BadgeRule)) newBadges.push({ id: b.id, name: b.name, description: b.description });
+    if (met(b.unlock_rule as BadgeRule)) newBadges.push({ id: b.id, key: b.key, name: b.name, description: b.description });
   }
   if (newBadges.length) {
     await supabase.from("user_badges").upsert(
@@ -246,5 +246,5 @@ export async function completeWorkout(
 
   revalidatePath("/today");
   revalidatePath("/stats");
-  return { newBadges: newBadges.map(({ name, description }) => ({ name, description })) };
+  return { newBadges: newBadges.map(({ key, name, description }) => ({ key, name, description })) };
 }

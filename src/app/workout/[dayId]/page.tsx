@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
 import { requireProfile } from "@/lib/data";
 import { adaptationNote, type ExerciseRow } from "@/lib/plan/exercises";
+import { getI18n } from "@/lib/i18n/server";
 import { WorkoutPlayer, type PlayerExercise } from "@/components/workout/WorkoutPlayer";
 
 export default async function WorkoutPage({ params }: { params: Promise<{ dayId: string }> }) {
   const { dayId } = await params;
   const { supabase, user, profile } = await requireProfile();
+  const { t } = await getI18n();
 
   const { data: day } = await supabase
     .from("plan_days")
@@ -72,12 +74,16 @@ export default async function WorkoutPage({ params }: { params: Promise<{ dayId:
 
   const plan = day.plans as unknown as { name: string } | null;
 
+  const planName = plan?.name ? (t.content.planNames[plan.name] ?? plan.name) : "RepUp";
+  const title = day.session_title ? (t.content.dayTitles[day.session_title] ?? day.session_title) : t.stats.workoutFallback;
+  const muscles = (day.focus_muscles ?? []).map((m: string) => t.content.muscles[m] ?? m);
+
   return (
     <WorkoutPlayer
       dayId={day.id}
-      planName={plan?.name ?? "RepUp"}
-      title={day.session_title ?? "Workout"}
-      subtitle={`${(day.focus_muscles ?? []).join(" & ")} · ~${day.est_duration_min ?? 45} min`}
+      planName={planName}
+      title={title}
+      subtitle={t.player.subtitle(muscles, day.est_duration_min ?? 45)}
       exercises={exercises}
       existingLogId={openLog?.id ?? null}
     />

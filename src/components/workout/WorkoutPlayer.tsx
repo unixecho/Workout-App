@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { ExerciseDemo } from "@/components/ExerciseDemo";
 import { ProgressRing } from "@/components/ProgressRing";
+import { useI18n } from "@/lib/i18n/client";
+import { isRtl } from "@/lib/i18n";
 import { completeWorkout, ensureWorkoutLog, setExerciseLogged } from "@/app/workout/[dayId]/actions";
 
 export interface PlayerExercise {
@@ -51,7 +53,8 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
   // exercise is logged in the same tick that marks it complete, and the
   // transition callback would otherwise read the pre-log state.
   const setLogsRef = useRef<Record<string, SetEntry[]>>({});
-  const [celebrate, setCelebrate] = useState<null | { badges: { name: string; description: string }[]; reps: number; minutes: number; exercises: number }>(null);
+  const { t } = useI18n();
+  const [celebrate, setCelebrate] = useState<null | { badges: { key: string; name: string; description: string }[]; reps: number; minutes: number; exercises: number }>(null);
   const [, startTransition] = useTransition();
   const logIdRef = useRef<string | null>(existingLogId);
   const startedAtRef = useRef(Date.now());
@@ -183,7 +186,7 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
         }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <button onClick={() => router.push("/today")} aria-label="Close" style={roundHeaderBtn()}>
+          <button onClick={() => router.push("/today")} aria-label={t.player.closeAria} style={roundHeaderBtn()}>
             ✕
           </button>
         </div>
@@ -197,11 +200,11 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
         <div style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 16, padding: 16, display: "flex", alignItems: "center", gap: 16 }}>
           <ProgressRing done={doneCount} total={required.length} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: "0.02em", textTransform: "uppercase", color: "var(--blue)" }}>Today&rsquo;s session</div>
+            <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: "0.02em", textTransform: "uppercase", color: "var(--blue)" }}>{t.player.todaysSession}</div>
             <div style={{ fontSize: 17, fontWeight: 700, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>
-              {doneCount} of {required.length} done
+              {t.player.doneOf(doneCount, required.length)}
             </div>
-            <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink-dim)", marginTop: 2 }}>Keep the tempo controlled</div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink-dim)", marginTop: 2 }}>{t.player.tempoHint}</div>
           </div>
         </div>
 
@@ -237,7 +240,7 @@ export function WorkoutPlayer({ dayId, planName, title, subtitle, exercises, exi
         </div>
 
         <div style={{ textAlign: "center", fontSize: 12.5, fontWeight: 500, color: "var(--ink-faint)", marginTop: 18, padding: "0 20px" }}>
-          Stop any exercise that causes sharp pain. Quality beats quantity.
+          {t.player.safetyNote}
         </div>
       </div>
 
@@ -276,14 +279,15 @@ function ExerciseRow({
   onComplete: () => void;
   onAutoComplete: () => void;
 }) {
+  const { locale, t } = useI18n();
   const meta =
-    (e.isWarmup ? "Warm-up · " : e.isCooldown ? "Cool-down · " : "") +
-    (e.doseType === "time" ? `${e.sets} × ${e.seconds}s` : `${e.sets} × ${e.repsMin}–${e.repsMax}`) +
-    (e.isOptional ? " · optional" : "");
+    (e.isWarmup ? t.editor.warmupPrefix : e.isCooldown ? t.editor.cooldownPrefix : "") +
+    (e.doseType === "time" ? `${e.sets} × ${e.seconds}${t.player.secondsSuffix}` : `${e.sets} × ${e.repsMin}–${e.repsMax}`) +
+    (e.isOptional ? t.player.optionalSuffix : "");
 
   return (
     <div style={{ borderTop: first ? "none" : "1px solid var(--hairline)" }}>
-      <button onClick={onToggleOpen} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", padding: "14px 16px" }}>
+      <button onClick={onToggleOpen} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "start", padding: "14px 16px" }}>
         <div
           style={{
             width: 34,
@@ -305,7 +309,7 @@ function ExerciseRow({
           <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", color: isDone ? "var(--ink-dim)" : "var(--ink)" }}>{e.name}</div>
           <div style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-dim)", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{meta}</div>
         </div>
-        <span style={{ color: "var(--ink-faint)", fontSize: 18, transition: "transform .3s cubic-bezier(.4,0,.2,1)", transform: open ? "rotate(90deg)" : "none" }}>›</span>
+        <span style={{ color: "var(--ink-faint)", fontSize: 18, display: "inline-block", transition: "transform .3s cubic-bezier(.4,0,.2,1)", transform: open ? "rotate(90deg)" : isRtl(locale) ? "scaleX(-1)" : "none" }}>›</span>
       </button>
 
       <div style={{ display: "grid", gridTemplateRows: open ? "1fr" : "0fr", transition: `grid-template-rows .35s ${EASE}` }}>
@@ -319,19 +323,19 @@ function ExerciseRow({
             )}
             {e.formCue && (
               <div style={infoBlock("blue")}>
-                <b style={{ color: "var(--blue)" }}>Form — </b>
+                <b style={{ color: "var(--blue)" }}>{t.player.form}</b>
                 {e.formCue}
               </div>
             )}
             {e.watchFor && (
               <div style={infoBlock("amber")}>
-                <b style={{ color: "var(--amber)" }}>Watch for — </b>
+                <b style={{ color: "var(--amber)" }}>{t.player.watchFor}</b>
                 {e.watchFor}
               </div>
             )}
             {e.adaptation && (
               <div style={infoBlock("amber")}>
-                <b style={{ color: "var(--amber)" }}>For you — </b>
+                <b style={{ color: "var(--amber)" }}>{t.player.forYou}</b>
                 {e.adaptation}
               </div>
             )}
@@ -348,7 +352,7 @@ function ExerciseRow({
                 transition: "background .2s ease, color .2s ease, transform .15s ease",
               }}
             >
-              {isDone ? "Completed ✓" : "Mark Complete"}
+              {isDone ? t.player.completed : t.player.markComplete}
             </button>
           </div>
         </div>
@@ -399,6 +403,7 @@ function RepTracker({
   onLogSet: (setIdx: number, entry: SetEntry) => void;
   onFinishAll: () => void;
 }) {
+  const { t } = useI18n();
   // A set is logged the moment it ends — with the rep count it actually
   // ended at and the weight in effect right then (so changing the weight
   // between sets records a real per-set load, e.g. pyramid sets).
@@ -437,7 +442,7 @@ function RepTracker({
   return (
     <div style={{ background: "var(--bg-elev)", borderRadius: 14, padding: 14, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
       <SetDots sets={sets} state={state} isDone={isDone} target={target} />
-      <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 22 }} dir="ltr">
         <RoundBtn label="−" tinted={false} onClick={dec} />
         <div style={{ fontSize: 38, fontWeight: 800, fontVariantNumeric: "tabular-nums", minWidth: 96, textAlign: "center" }}>
           {state.rep} <span style={{ color: "var(--ink-faint)", fontSize: 24 }}>/ {target}</span>
@@ -445,9 +450,9 @@ function RepTracker({
         <RoundBtn label="+" tinted onClick={inc} />
       </div>
       <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-dim)", fontVariantNumeric: "tabular-nums" }}>
-        Set {state.set} of {sets}
+        {t.player.setOf(state.set, sets)}
         {loggedReps.length > 0 && (
-          <span style={{ color: "var(--ink-faint)" }}> · logged {loggedReps.join(" · ")}</span>
+          <span style={{ color: "var(--ink-faint)" }}> · {t.player.loggedList(loggedReps.join(" · "))}</span>
         )}
       </div>
       {!isDone && state.rep > 0 && state.rep < target && (
@@ -463,13 +468,13 @@ function RepTracker({
             transition: "transform .15s ease, background .15s ease",
           }}
         >
-          {state.set >= sets ? `Finish at ${state.rep} reps` : `Log set — ${state.rep} reps`}
+          {state.set >= sets ? t.player.finishAt(state.rep) : t.player.logSetAt(state.rep)}
         </button>
       )}
       {equipment !== "none" && (
         <input
           type="number"
-          placeholder="Weight (kg)"
+          placeholder={t.player.weightPlaceholder}
           value={weight ?? ""}
           onChange={(e) => {
             const val = parseFloat(e.target.value);
@@ -516,6 +521,7 @@ function Timer({
   onLogSet: (setIdx: number, entry: SetEntry) => void;
   onFinishAll: () => void;
 }) {
+  const { t } = useI18n();
   const [left, setLeft] = useState(seconds);
   const [running, setRunning] = useState(false);
   const endRef = useRef(0);
@@ -543,7 +549,7 @@ function Timer({
   return (
     <div style={{ background: "var(--bg-elev)", borderRadius: 14, padding: 14, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
       <SetDots sets={sets} state={state} isDone={isDone} />
-      <div style={{ fontSize: 38, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{left}s</div>
+      <div style={{ fontSize: 38, fontWeight: 800, fontVariantNumeric: "tabular-nums" }} dir="ltr">{left}{t.player.secondsSuffix}</div>
       <div style={{ display: "flex", gap: 10 }}>
         <button
           onClick={() => {
@@ -552,7 +558,7 @@ function Timer({
           }}
           style={{ borderRadius: 999, padding: "10px 22px", fontSize: 14, fontWeight: 700, background: "rgba(61,139,253,0.14)", color: "var(--blue)" }}
         >
-          {running ? "Pause" : "Start"}
+          {running ? t.player.pause : t.player.startTimer}
         </button>
         <button
           onClick={() => {
@@ -561,16 +567,16 @@ function Timer({
           }}
           style={{ borderRadius: 999, padding: "10px 22px", fontSize: 14, fontWeight: 700, background: "var(--fill-resting)", color: "var(--ink)" }}
         >
-          Reset
+          {t.player.reset}
         </button>
       </div>
       <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-dim)", fontVariantNumeric: "tabular-nums" }}>
-        Set {state.set} of {sets}
+        {t.player.setOf(state.set, sets)}
       </div>
       {equipment !== "none" && (
         <input
           type="number"
-          placeholder="Weight (kg)"
+          placeholder={t.player.weightPlaceholder}
           value={weight ?? ""}
           onChange={(e) => {
             const val = parseFloat(e.target.value);
@@ -594,7 +600,8 @@ function Timer({
   );
 }
 
-function Celebration({ data, onDone }: { data: { badges: { name: string; description: string }[]; reps: number; minutes: number; exercises: number }; onDone: () => void }) {
+function Celebration({ data, onDone }: { data: { badges: { key: string; name: string; description: string }[]; reps: number; minutes: number; exercises: number }; onDone: () => void }) {
+  const { t } = useI18n();
   const [shown, setShown] = useState(false);
   const [leaving, setLeaving] = useState(false);
   useEffect(() => {
@@ -643,14 +650,14 @@ function Celebration({ data, onDone }: { data: { badges: { name: string; descrip
           <circle cx={32} cy={32} r={28} fill="none" stroke="var(--green)" strokeWidth={6} strokeLinecap="round" strokeDasharray={176} strokeDashoffset={0} />
         </svg>
       </div>
-      <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.02em", marginTop: 18 }}>Workout complete 💪</div>
+      <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.02em", marginTop: 18 }}>{t.player.workoutComplete}</div>
       {/* Summary tiles, staggered in */}
       <div style={{ display: "flex", gap: 10, marginTop: 18, width: "100%", maxWidth: 340 }}>
         {(
           [
-            [String(data.exercises), "exercises"],
-            [String(data.minutes), "minutes"],
-            ...(data.reps > 0 ? ([[String(data.reps), "reps"]] as const) : []),
+            [String(data.exercises), t.player.tileExercises],
+            [String(data.minutes), t.player.tileMinutes],
+            ...(data.reps > 0 ? ([[String(data.reps), t.player.tileReps]] as const) : []),
           ] as const
         ).map(([num, label], i) => (
           <div
@@ -691,10 +698,10 @@ function Celebration({ data, onDone }: { data: { badges: { name: string; descrip
           >
             <div style={{ width: 44, height: 44, borderRadius: 999, background: "rgba(48,209,88,0.16)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🏅</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 16, fontWeight: 700 }}>{b.name}</div>
-              <div style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-dim)" }}>{b.description}</div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>{t.content.badges[b.key] ?? b.name}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-dim)" }}>{t.content.badgeDescriptions[b.key] ?? b.description}</div>
             </div>
-            <span style={{ fontSize: 11, fontWeight: 800, color: "var(--green)", background: "rgba(48,209,88,0.16)", padding: "3px 8px", borderRadius: 999 }}>New!</span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "var(--green)", background: "rgba(48,209,88,0.16)", padding: "3px 8px", borderRadius: 999 }}>{t.player.newBadge}</span>
           </div>
         ))}
       </div>
@@ -705,7 +712,7 @@ function Celebration({ data, onDone }: { data: { badges: { name: string; descrip
         }}
         style={{ marginTop: 28, width: "100%", maxWidth: 340, padding: 15, borderRadius: 12, background: "var(--blue)", color: "#fff", fontSize: 15, fontWeight: 700 }}
       >
-        {leaving ? "" : "Done"}
+        {leaving ? "" : t.player.done}
       </button>
       </div>
       <style>{`@keyframes burstIn { 0% { transform: scale(.55); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }`}</style>

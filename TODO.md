@@ -1,5 +1,36 @@
 # TODO
 
+## Done (2026-07-13)
+
+- [x] **Loading progression graphs** — Stats gained a "Loading progression"
+      card: per-exercise top-set-per-session line chart (animated draw-in,
+      amber PR highlight + label, exercise picker chips, area fill, first/
+      last-date axis), fed by per-set actuals from 0015/0017. Exercises
+      with ≥2 weighted sessions qualify; heaviest first, top 6.
+- [x] **PWA install** — manifest.ts (standalone, portrait, theme colors) +
+      full icon set generated from public/icon.svg via scripts/icons.mjs
+      (192/512, maskable variants, apple-touch-icon). Proxy no longer
+      auth-gates the manifest fetch. Add-to-home-screen now installs like
+      an app on iOS + Android.
+- [x] **Pre-OAuth explainer** — animated AuthHandoff interstitial between
+      "Continue with Google" and the redirect: spring-pop RepUp→Google
+      handoff visual with flowing dots, three staggered trust cards (name+
+      email only, no passwords, nothing posted), white Google CTA with
+      connecting spinner, "Not now" backs out. OAuth errors still surface
+      on S0 after the round-trip.
+- [x] **Hebrew-first locale system (phase A — UI strings complete)** — see
+      docs/I18N.md for the full architecture. Hebrew is the home market:
+      cookie > Accept-Language (incl. legacy `iw`) > `he` fallback; en-GB
+      formatting for English (day-first dates). ALL screens extracted +
+      translated (Today, Plan incl. Sunday-first month grid, Stats,
+      Friends + live feed copy, Badges incl. 25 names+descriptions,
+      Library, Profile, Workout Player + celebration, Onboarding +
+      AuthHandoff, Session Editor, TabBar). Sunday-first week display
+      everywhere in Hebrew (storage stays Monday-first). RTL pass: logical
+      properties, dir-flip chevrons, LTR islands (charts, handle field,
+      timers). tsc enforces catalog parity; verified in preview (he RTL +
+      en negotiation, console clean).
+
 ## Done (2026-07-12, second session)
 
 - [x] **Enhanced rep tracking** — the Workout Player now logs what actually
@@ -221,10 +252,14 @@
 
 ## Open
 
-- [ ] **Hebrew locale** — in progress on the local `i18n-hebrew` branch
-      (NOT pushed, per owner). Infra + first translated surfaces done;
-      remaining: extract the rest of the screens, RTL audit, exercise-name
-      translations (DB strategy documented in docs/I18N.md on the branch)
+- [ ] **Hebrew locale — phase B/C** (docs/I18N.md §8–9): exercise content
+      translations (`exercise_translations` + `badge_translations` tables +
+      reader fallback wiring + Hebrew content batches for the 105-exercise
+      library — names, form cues, mistakes, adaptations); plan-title keys
+      in DB (editor title input still shows stored English); server action
+      error strings; **native-speaker review pass of the whole he catalog**;
+      on-device RTL walkthrough of authed screens (preview only covers
+      onboarding without a session)
 - [ ] Delete the old Sydney Supabase project now that the redirect-URL fix
       is confirmed live (see Done) — do this once a real sign-in has been
       tested end-to-end on Frankfurt (test accounts don't carry over —
@@ -240,7 +275,6 @@
 - [ ] Workout Player: "Remove from today" + "End workout early" flows
 - [ ] Notifications (workout reminder, streak-at-risk, social batch) — needs
       push infrastructure decision
-- [ ] PWA manifest + app icons (add-to-home-screen)
 - [ ] Google OAuth consent screen verification before public launch (owner)
 - [ ] Decide preview-vs-prod Supabase environment strategy before the next
       schema change ships (docs/TD.md § Deployment)

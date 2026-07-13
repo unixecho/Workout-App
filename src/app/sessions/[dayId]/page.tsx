@@ -1,14 +1,15 @@
 import { notFound } from "next/navigation";
 import { requireProfile } from "@/lib/data";
+import { getI18n } from "@/lib/i18n/server";
 import { equipmentAllows } from "@/lib/plan/exercises";
 import type { Equipment } from "@/lib/plan/generate";
 import { SessionEditorScreen, type EditorExercise, type SwapOption } from "@/components/sessions/SessionEditorScreen";
 
-const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export default async function SessionEditorPage({ params }: { params: Promise<{ dayId: string }> }) {
   const { dayId } = await params;
   const { supabase, profile } = await requireProfile();
+  const { t } = await getI18n();
 
   const { data: day } = await supabase
     .from("plan_days")
@@ -58,8 +59,8 @@ export default async function SessionEditorPage({ params }: { params: Promise<{ 
   return (
     <SessionEditorScreen
       dayId={day.id}
-      dayName={DAY_NAMES[day.day_of_week]}
-      title={day.session_title ?? "Session"}
+      dayName={t.plan.dayLong[day.day_of_week]}
+      title={day.session_title ?? t.stats.workoutFallback}
       usualMinutes={45}
       initialExercises={exercises}
       warmupOptions={warmupOptions}

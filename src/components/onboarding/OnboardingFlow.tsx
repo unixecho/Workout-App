@@ -6,6 +6,8 @@ import { StatSlider } from "@/components/StatSlider";
 import { AuthHandoff } from "@/components/onboarding/AuthHandoff";
 import { completeOnboarding } from "@/app/onboarding/actions";
 import { generateWeek, type Equipment, type Goal } from "@/lib/plan/generate";
+import { useI18n } from "@/lib/i18n/client";
+import { weekdayDisplayOrder } from "@/lib/i18n";
 
 // Hardcoded production origin for auth redirects — falls back to the
 // current origin so localhost still works without setting this locally.
@@ -17,43 +19,33 @@ const EASE = "cubic-bezier(.4,0,.2,1)";
 const TRANSITION_MS = 350;
 const BUILDING_MS = 600;
 
-const WEEKDAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 // Fixed vocabulary only — the exercise-adaptation system (docs/TD.md,
 // `exercises.adaptations`) can only act on these known tags. Free text here
 // would just be a string with no functional effect on plan generation.
 const LIMITATION_TAGS = ["Knee", "Shoulder", "Back", "Wrist", "Ankle", "Hip", "Elbow", "Neck"];
 
-const GOALS: { id: Goal; label: string; blurb: string; icon: ReactElement }[] = [
+// Labels/blurbs live in the locale dictionary (onboarding.goalLabels/Blurbs)
+const GOALS: { id: Goal; icon: ReactElement }[] = [
   {
     id: "lose_weight",
-    label: "Lose weight",
-    blurb: "Steady fat loss without losing strength",
     icon: (
       <path d="M3 7l6 6 4-4 8 8M21 17v-5M21 17h-5" />
     ),
   },
   {
     id: "build_muscle",
-    label: "Build muscle",
-    blurb: "Hypertrophy focus with progressive volume",
     icon: <path d="M7 8v8M17 8v8M4 10v4M20 10v4M7 12h10" />,
   },
   {
     id: "get_stronger",
-    label: "Get stronger",
-    blurb: "Heavy compounds, low reps, big lifts",
     icon: <path d="M6 6v12M18 6v12M2 9v6M22 9v6M6 12h12" />,
   },
   {
     id: "endurance",
-    label: "Endurance",
-    blurb: "Conditioning, intervals, longer sessions",
     icon: <path d="M3 12h4l2-6 4 12 2-6h6" />,
   },
   {
     id: "stay_healthy",
-    label: "Stay healthy",
-    blurb: "Balanced training, energy, longevity",
     icon: <path d="M12 20s-7-4.6-9-9c-1.3-3 1-7 4.5-7C10 4 12 6.5 12 6.5S14 4 16.5 4C20 4 22.3 8 21 11c-2 4.4-9 9-9 9z" />,
   },
 ];
@@ -84,6 +76,9 @@ interface Props {
 
 export function OnboardingFlow({ initialStep, initialProfile }: Props) {
   const supabase = createClient();
+  const { locale, t } = useI18n();
+  // Storage is Monday-first; Hebrew shows the week Sunday-first
+  const dayOrder = weekdayDisplayOrder(locale);
 
   const [step, setStep] = useState<number>(initialStep);
   const [prev, setPrev] = useState<number | null>(null);
@@ -236,7 +231,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
     const err = params.get("error");
     if (!code && !err) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- URL only exists client-side, must be read post-mount
-    setAuthError(params.get("error_description") ?? "Sign-in failed. Please try again.");
+    setAuthError(params.get("error_description") ?? t.onboarding.signInFailed);
     // Clean the hash/query so a refresh doesn\u2019t re-show a stale error
     window.history.replaceState(null, "", window.location.pathname);
   }, []);
@@ -281,7 +276,6 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
   const activeDays = weekOn;
   const daysPerWeek = activeDays.filter(Boolean).length;
   const week = goal ? generateWeek(goal, activeDays) : [];
-  const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   const targetKg = metric ? parseFloat(target) || weightKg : (parseFloat(target) || weightKg * 2.2046) / 2.2046;
   const paceWeeks = Math.max(4, Math.round(Math.abs(weightKg - targetKg) / 0.5));
@@ -312,7 +306,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
         throw err;
       }
       setAccepted(false);
-      setSaveError(err instanceof Error ? err.message : "Something went wrong — try again.");
+      setSaveError(err instanceof Error ? err.message : t.onboarding.saveFailed);
     }
   }
 
@@ -349,7 +343,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
           }}
         >
           <button
-            aria-label="Back"
+            aria-label={t.onboarding.backAria}
             onClick={goBack}
             style={{
               width: 36,
@@ -365,7 +359,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
               pointerEvents: step > 0 ? "auto" : "none",
             }}
           >
-            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+            <svg className="dir-flip" width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 6l-6 6 6 6" />
             </svg>
           </button>
@@ -436,7 +430,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
           </div>
           <div style={{ fontSize: 40, fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1 }}>RepUp</div>
           <div style={{ fontSize: 15, fontWeight: 500, color: "var(--ink-dim)", marginTop: 10 }}>
-            Train smarter, together
+            {t.onboarding.tagline}
           </div>
         </div>
 
@@ -468,7 +462,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
             >
               G
             </span>
-            Continue with Google
+            {t.onboarding.continueWithGoogle}
           </PrimaryTintButton>
         </div>
       </Screen>
@@ -488,11 +482,11 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
       {/* S1 — Profile */}
       <Screen style={screenStyle(1)}>
         <StepEyebrow n={2} />
-        <h1 style={titleStyle}>Set up your profile</h1>
-        <div style={subtitleStyle}>How you&rsquo;ll appear to friends.</div>
+        <h1 style={titleStyle}>{t.onboarding.profileTitle}</h1>
+        <div style={subtitleStyle}>{t.onboarding.profileSubtitle}</div>
 
         <button
-          aria-label="Change avatar"
+          aria-label={t.onboarding.changeAvatarAria}
           onClick={() => setAvatarTint((avatarTint + 1) % 3)}
           style={{
             alignSelf: "center",
@@ -518,27 +512,28 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
           </svg>
         </button>
         <div style={{ alignSelf: "center", fontSize: 12.5, fontWeight: 600, color: "var(--ink-faint)", marginBottom: 28 }}>
-          Tap to change
+          {t.onboarding.tapToChange}
         </div>
 
-        <div style={fieldLabelStyle}>Handle</div>
-        <div style={{ position: "relative", marginBottom: 6 }}>
-          <span style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", fontSize: 16, fontWeight: 600, color: "var(--ink-faint)" }}>
+        <div style={fieldLabelStyle}>{t.onboarding.handleLabel}</div>
+        {/* Handles are latin-only — the whole field is an LTR island */}
+        <div dir="ltr" style={{ position: "relative", marginBottom: 6 }}>
+          <span style={{ position: "absolute", insetInlineStart: 16, top: "50%", transform: "translateY(-50%)", fontSize: 16, fontWeight: 600, color: "var(--ink-faint)" }}>
             @
           </span>
           <input
             type="text"
-            placeholder="handle"
+            placeholder={t.onboarding.handlePlaceholder}
             value={handle}
             onChange={(e) => onHandleChange(e.target.value)}
             autoCapitalize="none"
-            style={{ ...inputStyle(), padding: "14px 44px 14px 34px" }}
+            style={{ ...inputStyle(), paddingBlock: 14, paddingInlineStart: 34, paddingInlineEnd: 44 }}
           />
           {handleStatus === "checking" && (
             <span
               style={{
                 position: "absolute",
-                right: 16,
+                insetInlineEnd: 16,
                 top: "50%",
                 marginTop: -8,
                 width: 16,
@@ -551,7 +546,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
             />
           )}
           {handleStatus === "ok" && (
-            <span style={{ position: "absolute", right: 14, top: "50%", marginTop: -10 }}>
+            <span style={{ position: "absolute", insetInlineEnd: 14, top: "50%", marginTop: -10 }}>
               <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 12.5l5 5 11-11" />
               </svg>
@@ -565,44 +560,45 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
             fontWeight: 600,
             color:
               handleStatus === "ok" ? "var(--green)" : handleStatus === "taken" ? "var(--red)" : "var(--ink-faint)",
-            margin: "0 0 18px 4px",
+            marginBottom: 18,
+            marginInlineStart: 4,
             transition: "color .2s ease",
           }}
         >
           {handleStatus === "ok"
-            ? `@${handle} is available`
+            ? t.onboarding.handleAvailable(handle)
             : handleStatus === "taken"
-              ? `@${handle} is already taken`
+              ? t.onboarding.handleTaken(handle)
               : handleStatus === "checking"
-                ? "Checking availability…"
+                ? t.onboarding.handleChecking
                 : " "}
         </div>
 
-        <div style={fieldLabelStyle}>Display name</div>
-        <input type="text" placeholder="Jordan Reyes" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle()} />
+        <div style={fieldLabelStyle}>{t.onboarding.displayNameLabel}</div>
+        <input type="text" placeholder={t.onboarding.displayNamePlaceholder} value={name} onChange={(e) => setName(e.target.value)} style={inputStyle()} />
 
         <div style={{ flex: 1 }} />
         <PrimaryTintButton onClick={goNext} disabled={!handle || handleStatus !== "ok" || !name} style={{ marginTop: 24 }}>
-          Continue
+          {t.onboarding.continue}
         </PrimaryTintButton>
       </Screen>
 
       {/* S2 — Body stats */}
       <Screen style={screenStyle(2)}>
         <StepEyebrow n={3} />
-        <h1 style={titleStyle}>Tell us about you</h1>
-        <div style={subtitleStyle}>Used to estimate training loads.</div>
+        <h1 style={titleStyle}>{t.onboarding.bodyTitle}</h1>
+        <div style={subtitleStyle}>{t.onboarding.bodySubtitle}</div>
 
         <div style={cardStyle}>
-          <StatSlider label="Age" value={age} min={13} max={90} format={(v) => `${v} yrs`} onChange={setAge} />
+          <StatSlider label={t.profile.age} value={age} min={13} max={90} format={(v) => `${v} ${t.profile.yrs}`} onChange={setAge} />
           <Hairline />
-          <StatSlider label="Height" value={heightCm} min={120} max={220} format={fmtHeight} onChange={setHeightCm} />
+          <StatSlider label={t.profile.height} value={heightCm} min={120} max={220} format={fmtHeight} onChange={setHeightCm} />
           <Hairline />
-          <StatSlider label="Weight" value={weightKg} min={35} max={200} format={fmtWeight} onChange={setWeightKg} />
+          <StatSlider label={t.profile.weight} value={weightKg} min={35} max={200} format={fmtWeight} onChange={setWeightKg} />
         </div>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-dim)", paddingLeft: 4 }}>Units</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-dim)", paddingInlineStart: 4 }}>{t.profile.units}</div>
           <SegmentedControl
             options={[
               { key: "metric", label: "kg · cm" },
@@ -615,15 +611,15 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
 
         <div style={{ flex: 1 }} />
         <PrimaryTintButton onClick={goNext} style={{ marginTop: 24 }}>
-          Continue
+          {t.onboarding.continue}
         </PrimaryTintButton>
       </Screen>
 
       {/* S3 — Goal */}
       <Screen style={screenStyle(3)}>
         <StepEyebrow n={4} />
-        <h1 style={titleStyle}>What&rsquo;s your goal?</h1>
-        <div style={{ ...subtitleStyle, marginBottom: 24 }}>We&rsquo;ll shape your plan around it.</div>
+        <h1 style={titleStyle}>{t.onboarding.goalTitle}</h1>
+        <div style={{ ...subtitleStyle, marginBottom: 24 }}>{t.onboarding.goalSubtitle}</div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {GOALS.map((g) => (
@@ -635,7 +631,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
                   alignItems: "center",
                   gap: 14,
                   width: "100%",
-                  textAlign: "left",
+                  textAlign: "start",
                   borderRadius: 16,
                   padding: 16,
                   background: goal === g.id ? "rgba(61,139,253,0.10)" : "var(--card)",
@@ -661,9 +657,9 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
                   </svg>
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em" }}>{g.label}</span>
+                  <span style={{ display: "block", fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em" }}>{t.profile.goals[g.id]}</span>
                   <span style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--ink-dim)", marginTop: 2 }}>
-                    {g.blurb}
+                    {t.onboarding.goalBlurbs[g.id]}
                   </span>
                 </span>
               </button>
@@ -693,14 +689,14 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
                           inputMode="decimal"
                           value={target}
                           onChange={(e) => setTarget(e.target.value)}
-                          style={{ ...inputStyle(), padding: "14px 90px 14px 16px", fontVariantNumeric: "tabular-nums" }}
+                          style={{ ...inputStyle(), paddingBlock: 14, paddingInlineStart: 16, paddingInlineEnd: 90, fontVariantNumeric: "tabular-nums" }}
                         />
-                        <span style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", fontSize: 13, fontWeight: 600, color: "var(--ink-faint)" }}>
-                          target {metric ? "kg" : "lb"}
+                        <span style={{ position: "absolute", insetInlineEnd: 16, top: "50%", transform: "translateY(-50%)", fontSize: 13, fontWeight: 600, color: "var(--ink-faint)" }}>
+                          {t.onboarding.targetUnit(metric ? t.common.kg : "lb")}
                         </span>
                       </div>
-                      <div style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-dim)", paddingLeft: 4 }}>
-                        At this pace: ~{paceWeeks} weeks <span style={{ color: "var(--ink-faint)" }}>— estimate, not a promise</span>
+                      <div style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-dim)", paddingInlineStart: 4 }}>
+                        {t.onboarding.paceEstimate(paceWeeks)} <span style={{ color: "var(--ink-faint)" }}>{t.onboarding.paceDisclaimer}</span>
                       </div>
                     </div>
                   </div>
@@ -712,27 +708,27 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
 
         <div style={{ flex: 1 }} />
         <PrimaryTintButton onClick={goNext} disabled={!goal} style={{ marginTop: 24 }}>
-          Continue
+          {t.onboarding.continue}
         </PrimaryTintButton>
       </Screen>
 
       {/* S4 — Availability */}
       <Screen style={screenStyle(4)}>
         <StepEyebrow n={5} />
-        <h1 style={titleStyle}>When can you train?</h1>
-        <div style={{ ...subtitleStyle, marginBottom: 24 }}>We&rsquo;ll fit the plan to your week.</div>
+        <h1 style={titleStyle}>{t.onboarding.availTitle}</h1>
+        <div style={{ ...subtitleStyle, marginBottom: 24 }}>{t.onboarding.availSubtitle}</div>
 
         <div style={{ ...cardStyle, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
             <div>
-              <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em" }}>Days per week</div>
-              <div style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-dim)", marginTop: 2 }}>Most people do best with 3&ndash;5</div>
+              <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em" }}>{t.onboarding.daysPerWeekLabel}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-dim)", marginTop: 2 }}>{t.onboarding.daysPerWeekHint}</div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <RoundStepperButton
                 label="−"
                 tinted={false}
-                ariaLabel="Fewer days"
+                ariaLabel={t.onboarding.fewerDaysAria}
                 onClick={() => {
                   const w = [...weekOn];
                   for (let i = 6; i >= 0; i--) {
@@ -750,7 +746,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
               <RoundStepperButton
                 label="+"
                 tinted
-                ariaLabel="More days"
+                ariaLabel={t.onboarding.moreDaysAria}
                 onClick={() => {
                   const w = [...weekOn];
                   const order = [2, 5, 0, 3, 1, 4, 6];
@@ -766,7 +762,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, justifyContent: "space-between" }}>
-            {WEEKDAY_LABELS.map((label, i) => (
+            {dayOrder.map((i) => (
               <button
                 key={i}
                 onClick={() => {
@@ -787,20 +783,20 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
                   transition: "background .2s ease, color .2s ease, border-color .2s ease, transform .15s ease",
                 }}
               >
-                {label}
+                {t.today.weekLetters[i]}
               </button>
             ))}
           </div>
         </div>
 
         <div style={{ ...cardStyle, padding: 16 }}>
-          <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", marginBottom: 12 }}>Equipment</div>
+          <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", marginBottom: 12 }}>{t.profile.equipment}</div>
           <SegmentedControl
             options={[
-              { key: "none", label: "None" },
-              { key: "park", label: "Park" },
-              { key: "basic", label: "Basic" },
-              { key: "full_gym", label: "Full gym" },
+              { key: "none", label: t.profile.equipmentShort.none },
+              { key: "park", label: t.profile.equipmentShort.park },
+              { key: "basic", label: t.profile.equipmentShort.basic },
+              { key: "full_gym", label: t.profile.equipmentShort.full_gym },
             ]}
             value={equip}
             onChange={(k) => setEquip(k as Equipment)}
@@ -810,10 +806,10 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
 
         <div style={{ ...cardStyle, padding: 16 }}>
           <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", marginBottom: 4 }}>
-            Anything we should work around?
+            {t.onboarding.limitationsTitle}
           </div>
           <div style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-faint)", marginBottom: 12 }}>
-            Tap any areas to protect — this drives which exercises get adapted or skipped.
+            {t.onboarding.limitationsHint}
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {LIMITATION_TAGS.map((tag) => {
@@ -833,7 +829,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
                     transition: "background .15s ease, border-color .15s ease, transform .15s ease",
                   }}
                 >
-                  {tag}
+                  {t.profile.limitTags[tag] ?? tag}
                 </button>
               );
             })}
@@ -842,7 +838,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
 
         <div style={{ flex: 1 }} />
         <PrimaryTintButton onClick={() => nav(5, 1)} style={{ marginTop: 24 }}>
-          Build my plan
+          {t.onboarding.buildMyPlan}
         </PrimaryTintButton>
       </Screen>
 
@@ -850,9 +846,9 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
       <Screen style={screenStyle(5)}>
         {building ? (
           <>
-            <div style={eyebrowStyle}>Almost there</div>
-            <h1 style={titleStyle}>Building your plan&hellip;</h1>
-            <div style={{ ...subtitleStyle, marginBottom: 24 }}>Balancing volume across your week.</div>
+            <div style={eyebrowStyle}>{t.onboarding.almostThere}</div>
+            <h1 style={titleStyle}>{t.onboarding.buildingTitle}</h1>
+            <div style={{ ...subtitleStyle, marginBottom: 24 }}>{t.onboarding.buildingSubtitle}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {Array.from({ length: 7 }).map((_, i) => (
                 <div
@@ -871,14 +867,17 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
           </>
         ) : (
           <>
-            <div style={{ ...eyebrowStyle, color: "var(--green)" }}>Step 6 of 6</div>
-            <h1 style={titleStyle}>Your week is ready</h1>
+            <div style={{ ...eyebrowStyle, color: "var(--green)" }}>{t.onboarding.stepOf(6)}</div>
+            <h1 style={titleStyle}>{t.onboarding.readyTitle}</h1>
             <div style={{ ...subtitleStyle, marginBottom: 24 }}>
-              {daysPerWeek} sessions · {7 - daysPerWeek} rest days · built around your goal
+              {t.onboarding.readySubtitle(daysPerWeek, 7 - daysPerWeek)}
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {week.map((day, i) => (
+              {dayOrder.map((i, pos) => {
+                const day = week[i];
+                if (!day) return null;
+                return (
                 <div
                   key={i}
                   style={{
@@ -891,7 +890,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
                     padding: "14px 16px",
                     opacity: revealed ? 1 : 0,
                     transform: revealed ? "translateY(0px)" : "translateY(18px)",
-                    transition: `opacity .5s ${EASE} ${i * 60}ms, transform .5s ${EASE} ${i * 60}ms`,
+                    transition: `opacity .5s ${EASE} ${pos * 60}ms, transform .5s ${EASE} ${pos * 60}ms`,
                   }}
                 >
                   <div style={{ width: 44, flexShrink: 0, textAlign: "center" }}>
@@ -904,7 +903,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
                         color: day.isRestDay ? "var(--ink-faint)" : "var(--blue)",
                       }}
                     >
-                      {dayNames[i]}
+                      {t.plan.dayShort[i]}
                     </div>
                   </div>
                   <div style={{ width: 1, alignSelf: "stretch", background: "var(--hairline)" }} />
@@ -914,16 +913,16 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
                         <path d="M20 13A8 8 0 1 1 11 4a6.5 6.5 0 0 0 9 9z" />
                       </svg>
                       <div>
-                        <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--ink-dim)" }}>Rest day</div>
+                        <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--ink-dim)" }}>{t.plan.restDay}</div>
                         <div style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-faint)", marginTop: 2 }}>
-                          Recovery · light walk optional
+                          {t.onboarding.restBlurb}
                         </div>
                       </div>
                     </div>
                   ) : (
                     <>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em" }}>{day.sessionTitle}</div>
+                        <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em" }}>{(day.sessionTitle && t.content.dayTitles[day.sessionTitle]) ?? day.sessionTitle}</div>
                         <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
                           {day.focusMuscles.map((m) => (
                             <span
@@ -937,18 +936,19 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
                                 color: "var(--blue)",
                               }}
                             >
-                              {m}
+                              {t.content.muscles[m] ?? m}
                             </span>
                           ))}
                         </div>
                       </div>
                       <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink-dim)", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
-                        {day.estDurationMin} min
+                        {t.common.min(day.estDurationMin ?? 45)}
                       </div>
                     </>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             <div style={{ flex: 1, minHeight: 24 }} />
@@ -979,7 +979,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
                   transition: "transform .15s ease, background .2s ease, color .2s ease",
                 }}
               >
-                {accepted ? "Setting up your plan…" : "Accept plan"}
+                {accepted ? t.onboarding.settingUp : t.onboarding.acceptPlan}
               </button>
               <button
                 style={{
@@ -994,7 +994,7 @@ export function OnboardingFlow({ initialStep, initialProfile }: Props) {
                   transition: "transform .15s ease, background .15s ease",
                 }}
               >
-                Customize
+                {t.onboarding.customize}
               </button>
             </div>
           </>
@@ -1039,11 +1039,12 @@ function Screen({ style, children }: { style: CSSProperties; children: React.Rea
 }
 
 function StepEyebrow({ n }: { n: number }) {
-  return <div style={eyebrowStyle}>Step {n} of 6</div>;
+  const { t } = useI18n();
+  return <div style={eyebrowStyle}>{t.onboarding.stepOf(n)}</div>;
 }
 
 function Hairline() {
-  return <div style={{ height: 1, background: "var(--hairline)", marginLeft: 16 }} />;
+  return <div style={{ height: 1, background: "var(--hairline)", marginInlineStart: 16 }} />;
 }
 
 function StatRow({ label, children }: { label: string; children: React.ReactNode }) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
+import { useI18n } from "@/lib/i18n/client";
 
 const EASE = "cubic-bezier(.4,0,.2,1)";
 const SPRING = "cubic-bezier(.34,1.56,.64,1)";
@@ -24,6 +25,7 @@ export function AuthHandoff({
   onContinue: () => void;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   // Keep mounted through the exit animation
   const [shown, setShown] = useState(open);
   const [closing, setClosing] = useState(false);
@@ -45,16 +47,16 @@ export function AuthHandoff({
   if (!shown) return null;
 
   const rows: [string, string, string][] = [
-    ["🔒", "Only your name & email", "That's everything Google shares with RepUp."],
-    ["⚡", "One tap, no passwords", "Your Google account is the key — nothing new to remember."],
-    ["🙈", "Nothing posted, ever", "RepUp can't read your Gmail, files, or contacts."],
+    ["🔒", t.authHandoff.row1Title, t.authHandoff.row1Blurb],
+    ["⚡", t.authHandoff.row2Title, t.authHandoff.row2Blurb],
+    ["🙈", t.authHandoff.row3Title, t.authHandoff.row3Blurb],
   ];
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Sign in with Google"
+      aria-label={t.onboarding.continueWithGoogle}
       style={{
         position: "fixed",
         inset: 0,
@@ -72,8 +74,8 @@ export function AuthHandoff({
     >
       {/* Back */}
       <button
-        aria-label="Back"
-        className="press"
+        aria-label={t.onboarding.backAria}
+        className="press dir-flip"
         onClick={onClose}
         style={{
           alignSelf: "flex-start",
@@ -105,7 +107,7 @@ export function AuthHandoff({
           minHeight: 300,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 18, marginBottom: 28 }}>
+        <div dir="ltr" style={{ display: "flex", alignItems: "center", gap: 18, marginBottom: 28 }}>
           <Tile delay={0.1}>
             <svg width={30} height={30} viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M7 8v8" />
@@ -146,7 +148,7 @@ export function AuthHandoff({
             animation: `rise-in .5s ${EASE} .18s backwards`,
           }}
         >
-          A quick hop to Google
+          {t.authHandoff.title}
         </h1>
         <p
           style={{
@@ -159,7 +161,7 @@ export function AuthHandoff({
             animation: `rise-in .5s ${EASE} .26s backwards`,
           }}
         >
-          Google confirms it&rsquo;s you, then sends you straight back here. Here&rsquo;s the deal:
+          {t.authHandoff.subtitle}
         </p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 26, width: "100%", maxWidth: 360 }}>
@@ -227,12 +229,12 @@ export function AuthHandoff({
                   animation: "spin .7s linear infinite",
                 }}
               />
-              Connecting to Google…
+              {t.authHandoff.connecting}
             </>
           ) : (
             <>
               <GoogleG size={18} />
-              Continue with Google
+              {t.onboarding.continueWithGoogle}
             </>
           )}
         </button>
@@ -242,7 +244,7 @@ export function AuthHandoff({
           className="press"
           style={{ padding: 8, fontSize: 14, fontWeight: 600, color: "var(--ink-dim)" }}
         >
-          Not now
+          {t.authHandoff.notNow}
         </button>
       </div>
     </div>
