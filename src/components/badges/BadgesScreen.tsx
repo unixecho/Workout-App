@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Sheet } from "@/components/Sheet";
+import { useI18n } from "@/lib/i18n/client";
+import { formatNumber } from "@/lib/i18n/format";
 
 export interface BadgeTile {
   key: string;
@@ -15,13 +17,6 @@ export interface BadgeTile {
 }
 
 const SECTION_ORDER = ["streaks", "milestones", "volume", "social", "special"];
-const SECTION_LABELS: Record<string, string> = {
-  streaks: "Streaks",
-  milestones: "Milestones",
-  volume: "Volume",
-  social: "Social",
-  special: "Special",
-};
 const SECTION_EMOJI: Record<string, string> = {
   streaks: "🔥",
   milestones: "🏆",
@@ -32,6 +27,7 @@ const SECTION_EMOJI: Record<string, string> = {
 
 export function BadgesScreen({ tiles, earnedCount, totalCount }: { tiles: BadgeTile[]; earnedCount: number; totalCount: number }) {
   const router = useRouter();
+  const { locale, t } = useI18n();
   const [openBadge, setOpenBadge] = useState<BadgeTile | null>(null);
 
   return (
@@ -48,14 +44,14 @@ export function BadgesScreen({ tiles, earnedCount, totalCount }: { tiles: BadgeT
         }}
       >
         <button onClick={() => router.back()} style={{ display: "inline-flex", alignItems: "center", gap: 2, padding: "4px 6px 4px 0", marginBottom: 8, color: "var(--blue)", fontSize: 17, fontWeight: 500 }}>
-          <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+          <svg className="dir-flip" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
           </svg>
-          Stats
+          {t.badges.back}
         </button>
-        <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.05 }}>Badges</div>
+        <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.05 }}>{t.badges.title}</div>
         <div style={{ fontSize: 15, fontWeight: 500, color: "var(--ink-dim)", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
-          {earnedCount} of {totalCount} earned
+          {t.badges.earnedOf(earnedCount, totalCount)}
         </div>
       </div>
 
@@ -66,7 +62,7 @@ export function BadgesScreen({ tiles, earnedCount, totalCount }: { tiles: BadgeT
           return (
             <div key={section} style={{ marginTop: 26 }}>
               <div style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", margin: "0 2px 14px" }}>
-                {SECTION_LABELS[section]}
+                {t.badges.sections[section] ?? section}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px 8px" }}>
                 {inSection.map((t) => (
@@ -126,14 +122,14 @@ export function BadgesScreen({ tiles, earnedCount, totalCount }: { tiles: BadgeT
             </div>
             <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.02em" }}>{openBadge.name}</div>
             <div style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-dim)", lineHeight: 1.5 }}>{openBadge.description}</div>
-            {openBadge.earnedAt && <div style={{ fontSize: 13, fontWeight: 600, color: "var(--green)" }}>Earned {openBadge.earnedAt}</div>}
+            {openBadge.earnedAt && <div style={{ fontSize: 13, fontWeight: 600, color: "var(--green)" }}>{t.badges.earnedOn(openBadge.earnedAt)}</div>}
             {openBadge.progress && (
               <div style={{ width: "100%", marginTop: 6 }}>
                 <div style={{ height: 6, borderRadius: 999, background: "var(--card)", overflow: "hidden" }}>
                   <div style={{ width: `${Math.min(100, Math.round((openBadge.progress.current / openBadge.progress.target) * 100))}%`, height: "100%", background: "var(--blue)" }} />
                 </div>
                 <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink-faint)", marginTop: 6, fontVariantNumeric: "tabular-nums" }}>
-                  {openBadge.progress.current.toLocaleString()}/{openBadge.progress.target.toLocaleString()}
+                  {formatNumber(locale, openBadge.progress.current)}/{formatNumber(locale, openBadge.progress.target)}
                 </div>
               </div>
             )}

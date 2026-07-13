@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { ExerciseFigure } from "@/components/ExerciseDemo";
+import { useI18n } from "@/lib/i18n/client";
 
 export interface LibraryItem {
   id: string;
@@ -30,6 +31,7 @@ const FILTER_MUSCLES: Record<string, string[]> = {
 
 export function LibraryBrowse({ items, pickDayId, userEquipment }: { items: LibraryItem[]; pickDayId: string | null; userEquipment: string }) {
   const router = useRouter();
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
 
@@ -67,15 +69,15 @@ export function LibraryBrowse({ items, pickDayId, userEquipment }: { items: Libr
         }}
       >
         <button onClick={() => router.back()} style={{ display: "inline-flex", alignItems: "center", gap: 2, padding: "4px 6px 4px 0", marginBottom: 6, color: "var(--blue)", fontSize: 17, fontWeight: 500 }}>
-          <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+          <svg className="dir-flip" width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
           </svg>
-          Back
+          {t.library.back}
         </button>
         <div style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.02em", color: "var(--blue)" }}>
-          {pickDayId ? "Pick an exercise" : "Exercise Library"}
+          {pickDayId ? t.library.pickTitle : t.library.browseEyebrow}
         </div>
-        <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.02em", marginTop: 2 }}>Browse</div>
+        <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.02em", marginTop: 2 }}>{t.library.browse}</div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, background: "rgba(255,255,255,0.08)", borderRadius: 12, padding: "10px 12px" }}>
           <svg width={17} height={17} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
@@ -85,7 +87,7 @@ export function LibraryBrowse({ items, pickDayId, userEquipment }: { items: Libr
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search exercises"
+            placeholder={t.library.searchPlaceholder}
             style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "var(--ink)", fontSize: 16, fontWeight: 500 }}
           />
         </div>
@@ -112,7 +114,7 @@ export function LibraryBrowse({ items, pickDayId, userEquipment }: { items: Libr
                   transition: "transform .12s ease, background .2s ease",
                 }}
               >
-                {f}
+                {t.library.filters[f] ?? f}
               </button>
             );
           })}
@@ -139,7 +141,7 @@ export function LibraryBrowse({ items, pickDayId, userEquipment }: { items: Libr
             <div style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 14, background: "rgba(255,255,255,0.04)", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <ExerciseFigure pattern={e.pattern} size={70} animate={false} stroke="var(--ink-dim)" />
               {e.warns && (
-                <span style={{ position: "absolute", top: 4, right: 4, width: 16, height: 16, borderRadius: 999, background: "rgba(255,159,10,0.9)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#0A0D12" }}>
+                <span style={{ position: "absolute", top: 4, insetInlineEnd: 4, width: 16, height: 16, borderRadius: 999, background: "rgba(255,159,10,0.9)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#0A0D12" }}>
                   !
                 </span>
               )}
@@ -149,7 +151,7 @@ export function LibraryBrowse({ items, pickDayId, userEquipment }: { items: Libr
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {e.muscles.slice(0, 2).map((m) => (
                   <span key={m} style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 999, background: "var(--fill-resting)", color: "var(--ink-dim)" }}>
-                    {m}
+                    {t.content.muscles[m] ?? m}
                   </span>
                 ))}
               </div>
@@ -161,15 +163,15 @@ export function LibraryBrowse({ items, pickDayId, userEquipment }: { items: Libr
                 </div>
                 <span style={{ width: 1, height: 12, background: "var(--hairline)" }} />
                 <span style={{ fontSize: 12.5, fontWeight: 500, color: "var(--ink-faint)", textTransform: "capitalize" }}>
-                  {e.equipment === "full_gym" ? "Gym" : e.equipment === "basic" ? "Basic kit" : e.equipment === "park" ? "Park" : "Bodyweight"}
+                  {t.library.equipment[e.equipment] ?? e.equipment}
                 </span>
               </div>
             </div>
-            <span style={{ color: "var(--ink-faint)", fontSize: 18 }}>›</span>
+            <span className="dir-flip" style={{ color: "var(--ink-faint)", fontSize: 18 }}>›</span>
           </Link>
         ))}
         {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: 40, fontSize: 14, color: "var(--ink-faint)" }}>No matches — try a muscle group.</div>
+          <div style={{ textAlign: "center", padding: 40, fontSize: 14, color: "var(--ink-faint)" }}>{t.library.noMatches}</div>
         )}
       </div>
     </main>

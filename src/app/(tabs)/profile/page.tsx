@@ -1,8 +1,11 @@
 import { requireProfile } from "@/lib/data";
+import { getLocale } from "@/lib/i18n/server";
+import { formatDate } from "@/lib/i18n/format";
 import { ProfileScreen } from "@/components/profile/ProfileScreen";
 
 export default async function ProfilePage() {
   const { supabase, user, profile } = await requireProfile();
+  const locale = await getLocale();
 
   const [{ data: streak }, { count: workouts }, { count: badges }, { data: prefs }] = await Promise.all([
     supabase.from("streaks").select("current_streak").eq("user_id", user.id).single(),
@@ -28,7 +31,7 @@ export default async function ProfilePage() {
       displayName={profile.display_name ?? ""}
       handle={profile.handle ?? ""}
       email={user.email ?? ""}
-      joined={new Date(profile.created_at).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+      joined={formatDate(locale, profile.created_at, { month: "long", year: "numeric" })}
       stats={{ streak: streak?.current_streak ?? 0, badges: badges ?? 0, workouts: workouts ?? 0 }}
       body={{
         age: profile.age,

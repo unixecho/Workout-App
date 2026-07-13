@@ -1,8 +1,11 @@
 import { requireProfile } from "@/lib/data";
+import { getI18n } from "@/lib/i18n/server";
+import { formatDate } from "@/lib/i18n/format";
 import { BadgesScreen, type BadgeTile } from "@/components/badges/BadgesScreen";
 
 export default async function BadgesPage() {
   const { supabase, user } = await requireProfile();
+  const { locale, t } = await getI18n();
 
   const [{ data: catalog }, { data: mine }, { data: sums }, { data: streak }, { count: friends }, { count: bumps }] =
     await Promise.all([
@@ -55,9 +58,9 @@ export default async function BadgesPage() {
     return {
       key: b.key,
       section: b.section,
-      name: secret ? "???" : b.name,
-      description: secret ? "Secret badge — keep training to find out." : b.description,
-      earnedAt: earned ? new Date(earned).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : null,
+      name: secret ? "???" : (t.content.badges[b.key] ?? b.name),
+      description: secret ? t.badges.secretBlurb : (t.content.badgeDescriptions[b.key] ?? b.description),
+      earnedAt: earned ? formatDate(locale, earned, { month: "short", day: "numeric" }) : null,
       progress: prog && prog.target > 0 ? prog : null,
       secret,
     };
