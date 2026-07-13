@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { ProgressRing } from "@/components/ProgressRing";
+import { useI18n } from "@/lib/i18n/client";
+import { weekdayDisplayOrder } from "@/lib/i18n";
 import type { PlanDay } from "@/lib/data";
 
 export type WeekTileState = "completed" | "today" | "upcoming" | "rest" | "missed";
-
-const WEEK_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
 
 interface Props {
   firstName: string;
@@ -25,9 +25,13 @@ interface Props {
 }
 
 export function TodayScreen(p: Props) {
+  const { locale, t } = useI18n();
   const rest = !p.todayDay || p.todayDay.is_rest_day;
   const done = p.todayLogStatus === "complete";
   const inProgress = p.todayLogStatus === "in_progress";
+  // Storage is Monday-first everywhere; Hebrew displays Sunday-first
+  const order = weekdayDisplayOrder(locale);
+  const dayTitle = (title: string) => t.content.dayTitles[title] ?? title;
 
   return (
     <main style={{ minHeight: "100%", paddingBottom: 24 }}>
@@ -52,7 +56,7 @@ export function TodayScreen(p: Props) {
             {p.dateLabel}
           </div>
           <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.08, marginTop: 3 }}>
-            Let&rsquo;s go, {p.firstName}
+            {t.today.greeting(p.firstName)}
           </div>
         </div>
         <div
@@ -82,12 +86,12 @@ export function TodayScreen(p: Props) {
                 </svg>
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--ink-dim)" }}>Rest day</div>
-                <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: "-0.02em", marginTop: 3 }}>Recovery is training too</div>
+                <div style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--ink-dim)" }}>{t.today.restDay}</div>
+                <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: "-0.02em", marginTop: 3 }}>{t.today.restTitle}</div>
               </div>
             </div>
             <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--ink-dim)", marginTop: 12 }}>
-              Take it easy — your next session is waiting on the week strip below.
+              {t.today.restBlurb}
             </div>
           </div>
         ) : done ? (
@@ -97,12 +101,13 @@ export function TodayScreen(p: Props) {
                 <Check />
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--green)" }}>Complete</div>
-                <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: "-0.02em", marginTop: 2 }}>{p.todayDay!.session_title}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--green)" }}>{t.today.completeLabel}</div>
+                <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: "-0.02em", marginTop: 2 }}>{dayTitle(p.todayDay!.session_title ?? "")}</div>
               </div>
             </div>
             <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--ink-dim)", marginTop: 12, fontVariantNumeric: "tabular-nums" }}>
-              {p.exercisesTotal} exercises{p.todayDurationMin ? ` · ${p.todayDurationMin} min` : ""}
+              {t.today.exercisesCount(p.exercisesTotal)}
+              {p.todayDurationMin ? ` · ${t.common.min(p.todayDurationMin)}` : ""}
             </div>
           </div>
         ) : (
@@ -113,28 +118,28 @@ export function TodayScreen(p: Props) {
                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                   <ProgressRing done={p.exercisesDone} total={p.exercisesTotal} size={72} />
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--green)" }}>In progress</div>
-                    <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: "-0.02em", marginTop: 3 }}>{p.todayDay!.session_title}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--green)" }}>{t.today.inProgressLabel}</div>
+                    <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: "-0.02em", marginTop: 3 }}>{dayTitle(p.todayDay!.session_title ?? "")}</div>
                     <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--ink-dim)", marginTop: 5, fontVariantNumeric: "tabular-nums" }}>
-                      {p.exercisesTotal - p.exercisesDone} exercises left
+                      {t.today.exercisesLeft(p.exercisesTotal - p.exercisesDone)}
                     </div>
                   </div>
                 </div>
               ) : (
                 <>
-                  <div style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--blue)" }}>Today&rsquo;s Workout</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em", marginTop: 5 }}>{p.todayDay!.session_title}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--blue)" }}>{t.today.todaysWorkout}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em", marginTop: 5 }}>{dayTitle(p.todayDay!.session_title ?? "")}</div>
                   <div style={{ display: "flex", gap: 7, marginTop: 12, flexWrap: "wrap" }}>
                     {p.todayDay!.focus_muscles.map((m) => (
                       <span key={m} style={{ padding: "5px 11px", borderRadius: 999, background: "rgba(255,255,255,0.06)", fontSize: 12.5, fontWeight: 600, color: "var(--ink-dim)" }}>
-                        {m}
+                        {t.content.muscles[m] ?? m}
                       </span>
                     ))}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, fontSize: 13.5, fontWeight: 500, color: "var(--ink-dim)", fontVariantNumeric: "tabular-nums" }}>
-                    <span>{p.todayDay!.est_duration_min ?? 45} min</span>
+                    <span>{t.common.min(p.todayDay!.est_duration_min ?? 45)}</span>
                     <span style={{ color: "var(--ink-faint)" }}>·</span>
-                    <span>{p.exercisesTotal} exercises</span>
+                    <span>{t.today.exercisesCount(p.exercisesTotal)}</span>
                   </div>
                 </>
               )}
@@ -155,7 +160,7 @@ export function TodayScreen(p: Props) {
                   transition: "transform .16s cubic-bezier(.4,0,.2,1), filter .16s ease",
                 }}
               >
-                {inProgress ? "Resume" : "Start"}
+                {inProgress ? t.today.resume : t.today.start}
               </Link>
             </div>
           </div>
@@ -164,15 +169,15 @@ export function TodayScreen(p: Props) {
         {/* Week strip */}
         <div>
           <div style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--ink-faint)", margin: "0 2px 10px" }}>
-            This week
+            {t.today.thisWeek}
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
-            {p.weekTiles.map((state, i) => (
+            {order.map((i) => (
               <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flex: 1 }}>
-                <span style={{ fontSize: 12, fontWeight: i === p.todayIdx ? 700 : 600, color: i === p.todayIdx ? "var(--blue)" : state === "missed" ? "var(--amber)" : "var(--ink-faint)", opacity: state === "missed" ? 0.7 : 1 }}>
-                  {WEEK_LETTERS[i]}
+                <span style={{ fontSize: 12, fontWeight: i === p.todayIdx ? 700 : 600, color: i === p.todayIdx ? "var(--blue)" : p.weekTiles[i] === "missed" ? "var(--amber)" : "var(--ink-faint)", opacity: p.weekTiles[i] === "missed" ? 0.7 : 1 }}>
+                  {t.today.weekLetters[i]}
                 </span>
-                <WeekTile state={state} dayNum={p.weekDayNumbers[i]} />
+                <WeekTile state={p.weekTiles[i]} dayNum={p.weekDayNumbers[i]} />
               </div>
             ))}
           </div>
@@ -181,14 +186,14 @@ export function TodayScreen(p: Props) {
         {/* Friends ticker */}
         <div style={{ ...card(), padding: 0, overflow: "hidden" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px 10px" }}>
-            <span style={{ fontSize: 15, fontWeight: 700 }}>Friends</span>
+            <span style={{ fontSize: 15, fontWeight: 700 }}>{t.today.friends}</span>
             <Link href="/friends" style={{ fontSize: 14, fontWeight: 600, color: "var(--blue)" }}>
-              See all
+              {t.today.seeAll}
             </Link>
           </div>
           {p.feed.length === 0 ? (
             <div style={{ padding: "6px 16px 16px", fontSize: 13.5, fontWeight: 500, color: "var(--ink-faint)" }}>
-              No activity yet — add a friend to make training stick.
+              {t.today.noActivity}
             </div>
           ) : (
             p.feed.map((f, i) => (
@@ -218,7 +223,7 @@ export function TodayScreen(p: Props) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em" }}>{p.badgeTeaser.name}</div>
                 <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink-dim)", marginTop: 1, fontVariantNumeric: "tabular-nums" }}>
-                  {p.badgeTeaser.toGo} workout{p.badgeTeaser.toGo === 1 ? "" : "s"} to go
+                  {t.today.workoutsToGo(p.badgeTeaser.toGo)}
                 </div>
               </div>
             </div>

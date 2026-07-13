@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
-import { asLocale, LOCALE_COOKIE } from "./index";
+import { asLocale, DEFAULT_LOCALE, LOCALE_COOKIE } from "./index";
 
 /** Persist the viewer's language choice (Profile → Language). */
 export async function setLocale(value: string) {
   const store = await cookies();
-  store.set(LOCALE_COOKIE, asLocale(value), {
+  store.set(LOCALE_COOKIE, asLocale(value) ?? DEFAULT_LOCALE, {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
     sameSite: "lax",

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Sheet } from "@/components/Sheet";
+import { useI18n } from "@/lib/i18n/client";
 import { feedItemFrom, type ActivityEventRow, type FeedItem } from "@/lib/feed";
 import { pokeFriend, respondToRequest, sendFriendRequest, toggleFistBump } from "@/app/(tabs)/friends/actions";
 
@@ -19,6 +20,7 @@ export interface FriendCard {
 
 export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; people: FriendCard[]; userId: string }) {
   const router = useRouter();
+  const { locale, t } = useI18n();
   const [segment, setSegment] = useState<"activity" | "friends">("activity");
   const [addOpen, setAddOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -76,7 +78,7 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
                 .eq("id", eventId)
                 .single();
               if (!ev) return;
-              const item = feedItemFrom(eventId, createdAt, ev as ActivityEventRow, userId);
+              const item = feedItemFrom(eventId, createdAt, ev as ActivityEventRow, userId, locale);
               setItems((prev) => (prev.some((i) => i.eventId === eventId) ? prev : [item, ...prev]));
               setFreshIds((prev) => new Set(prev).add(eventId));
             },
@@ -118,7 +120,7 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
       window.removeEventListener("focus", onVisible);
       if (channel) supabase.removeChannel(channel);
     };
-  }, [userId, router]);
+  }, [userId, router, locale]);
 
   const friends = people.filter((p) => p.relation === "friend");
   const incoming = people.filter((p) => p.relation === "incoming");
@@ -164,9 +166,9 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
         }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.02em" }}>Friends</div>
+          <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.02em" }}>{t.friendsScreen.title}</div>
           <button
-            aria-label="Add friend"
+            aria-label={t.friendsScreen.addFriend}
             onClick={() => setAddOpen(true)}
             style={{ width: 36, height: 36, borderRadius: 999, background: "rgba(61,139,253,0.14)", color: "var(--blue)", fontSize: 22, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center" }}
           >
@@ -184,21 +186,20 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
                 borderRadius: 8,
                 fontSize: 13,
                 fontWeight: 700,
-                textTransform: "capitalize",
                 background: segment === s ? "rgba(61,139,253,0.18)" : "transparent",
                 color: segment === s ? "var(--blue)" : "var(--ink-dim)",
                 transition: "background .2s ease, color .2s ease",
                 position: "relative",
               }}
             >
-              {s}
+              {s === "activity" ? t.friendsScreen.segmentActivity : t.friendsScreen.segmentFriends}
               {s === "friends" && incoming.length > 0 && (
                 <span
-                  aria-label={`${incoming.length} pending request${incoming.length > 1 ? "s" : ""}`}
+                  aria-label={t.friendsScreen.pendingRequests(incoming.length)}
                   style={{
                     position: "absolute",
                     top: 3,
-                    right: 10,
+                    insetInlineEnd: 10,
                     minWidth: 15,
                     height: 15,
                     padding: "0 3px",
@@ -243,7 +244,7 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
                     gap: 12,
                     background: "var(--card)",
                     border: "1px solid var(--card-border)",
-                    borderLeft: emphasized ? `3px solid ${accent}` : "1px solid var(--card-border)",
+                    borderInlineStart: emphasized ? `3px solid ${accent}` : "1px solid var(--card-border)",
                     borderRadius: 16,
                     padding: 14,
                     cursor: clickable ? "pointer" : "default",
@@ -260,7 +261,11 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
                     <div style={{ display: "flex", gap: 8, marginTop: 3, fontSize: 12.5, fontWeight: 500, color: "var(--ink-faint)" }}>
                       {f.context && <span>{f.context}</span>}
                       <span>{f.when}</span>
-                      {clickable && <span style={{ color: "var(--green)" }}>View badges ›</span>}
+                      {clickable && (
+                        <span style={{ color: "var(--green)" }}>
+                          {t.friendsScreen.viewBadges} <span className="dir-flip" style={{ display: "inline-block" }}>›</span>
+                        </span>
+                      )}
                     </div>
                   </div>
                   {bumpable && (
@@ -306,7 +311,7 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
                         transition: "transform .15s ease, background .2s ease",
                       }}
                     >
-                      {pokedIds.has(f.actorUserId) ? "✅" : "👊 Bump back"}
+                      {pokedIds.has(f.actorUserId) ? "✅" : `👊 ${t.friendsScreen.bumpBack}`}
                     </button>
                   )}
                 </div>
@@ -317,7 +322,7 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
           <>
             {incoming.length > 0 && (
               <>
-                <SectionLabel text="Requests" />
+                <SectionLabel text={t.friendsScreen.requests} />
                 {incoming.map((r) => (
                   <div key={r.userId} style={rowCard()}>
                     <Avatar name={r.name} />
@@ -330,14 +335,14 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
                       onClick={() => startTransition(() => respondToRequest(r.userId, true))}
                       style={{ borderRadius: 999, padding: "8px 16px", fontSize: 13, fontWeight: 700, background: "rgba(61,139,253,0.18)", color: "var(--blue)" }}
                     >
-                      Accept
+                      {t.friendsScreen.accept}
                     </button>
                     <button
                       disabled={pending}
                       onClick={() => startTransition(() => respondToRequest(r.userId, false))}
                       style={{ borderRadius: 999, padding: "8px 14px", fontSize: 13, fontWeight: 700, background: "var(--fill-resting)", color: "var(--ink-dim)" }}
                     >
-                      Decline
+                      {t.friendsScreen.decline}
                     </button>
                   </div>
                 ))}
@@ -348,7 +353,7 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
             ) : (
               friends.length > 0 && (
                 <>
-                  <SectionLabel text="Friends" />
+                  <SectionLabel text={t.friendsScreen.friendsSection} />
                   <div style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 16, overflow: "hidden" }}>
                     {friends.map((f, i) => {
                       const poked = pokedIds.has(f.userId);
@@ -361,7 +366,7 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
                           </div>
                           <span style={{ fontSize: 14, fontWeight: 700, color: "var(--blue)", fontVariantNumeric: "tabular-nums" }}>🔥 {f.streak}</span>
                           <button
-                            aria-label={poked ? `Fist-bumped ${f.name}` : `Fist-bump ${f.name}`}
+                            aria-label={poked ? t.friendsScreen.bumpedAria(f.name) : t.friendsScreen.bumpAria(f.name)}
                             onClick={() => poke(f.userId)}
                             disabled={poked}
                             className={poked ? undefined : "bump-nudge"}
@@ -392,13 +397,13 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
       </div>
 
       {/* Add friend sheet */}
-      <Sheet open={addOpen} onClose={() => setAddOpen(false)} title="Add friend">
+      <Sheet open={addOpen} onClose={() => setAddOpen(false)} title={t.friendsScreen.addFriend}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--fill-resting)", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
           <span style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-faint)" }}>@</span>
           <input
             value={query}
             onChange={(e) => search(e.target.value)}
-            placeholder="Search handles"
+            placeholder={t.friendsScreen.searchPlaceholder}
             autoCapitalize="none"
             style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "var(--ink)", fontSize: 16, fontWeight: 500 }}
           />
@@ -430,13 +435,13 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
                     color: already ? "var(--ink-faint)" : "var(--blue)",
                   }}
                 >
-                  {sentTo.has(r.user_id) ? "Sent ✓" : already ? "Added" : "Add"}
+                  {sentTo.has(r.user_id) ? t.friendsScreen.sent : already ? t.friendsScreen.added : t.friendsScreen.add}
                 </button>
               </div>
             );
           })}
           {query.length >= 2 && results.length === 0 && (
-            <div style={{ padding: 16, textAlign: "center", fontSize: 13.5, color: "var(--ink-faint)" }}>No one found with that handle.</div>
+            <div style={{ padding: 16, textAlign: "center", fontSize: 13.5, color: "var(--ink-faint)" }}>{t.friendsScreen.noResults}</div>
           )}
         </div>
       </Sheet>
@@ -445,15 +450,16 @@ export function FriendsScreen({ feed, people, userId }: { feed: FeedItem[]; peop
 }
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {
+  const { t } = useI18n();
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "48px 24px", textAlign: "center" }}>
       <div style={{ fontSize: 40 }}>🤝</div>
-      <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em" }}>Training is better with backup</div>
+      <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em" }}>{t.friendsScreen.emptyTitle}</div>
       <div style={{ fontSize: 14, fontWeight: 500, color: "var(--ink-dim)", lineHeight: 1.5 }}>
-        Friends see your workouts, you see theirs, and streaks get a lot harder to break.
+        {t.friendsScreen.emptyBlurb}
       </div>
-      <button onClick={onAdd} style={{ marginTop: 8, borderRadius: 12, padding: "13px 28px", fontSize: 15, fontWeight: 700, background: "rgba(61,139,253,0.14)", color: "var(--blue)" }}>
-        Add friend
+      <button onClick={onAdd} className="press" style={{ marginTop: 8, borderRadius: 12, padding: "13px 28px", fontSize: 15, fontWeight: 700, background: "rgba(61,139,253,0.14)", color: "var(--blue)" }}>
+        {t.friendsScreen.addFriend}
       </button>
     </div>
   );

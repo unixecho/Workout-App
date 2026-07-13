@@ -6,8 +6,9 @@ import { useMemo, useState, useTransition } from "react";
 import type { PlanDay } from "@/lib/data";
 import { convertToRestDay, regenerateWeek } from "@/app/(tabs)/plan/actions";
 import { Sheet } from "@/components/Sheet";
-
-const DAY_LABELS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+import { useI18n } from "@/lib/i18n/client";
+import { weekdayDisplayOrder } from "@/lib/i18n";
+import { formatDate } from "@/lib/i18n/format";
 
 interface Props {
   planName: string;
@@ -18,10 +19,16 @@ interface Props {
 }
 
 export function PlanScreen({ planName, days, todayIdx, completedDayIds, completedDates }: Props) {
+  const { locale, t } = useI18n();
   const [menuDay, setMenuDay] = useState<PlanDay | null>(null);
   const [confirmRegen, setConfirmRegen] = useState(false);
   const [view, setView] = useState<"week" | "month">("week");
   const [pending, startTransition] = useTransition();
+
+  const dayTitle = (title: string | null) => (title ? (t.content.dayTitles[title] ?? title) : "");
+  // Storage stays Monday-first; Hebrew lists the week Sunday-first
+  const order = weekdayDisplayOrder(locale);
+  const orderedDays = [...days].sort((a, b) => order.indexOf(a.day_of_week) - order.indexOf(b.day_of_week));
 
   return (
     <main style={{ minHeight: "100%", paddingBottom: 24 }}>
@@ -42,13 +49,13 @@ export function PlanScreen({ planName, days, todayIdx, completedDayIds, complete
       >
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.02em", color: "var(--blue)" }}>
-            {view === "week" ? "This week" : "This month"}
+            {view === "week" ? t.plan.thisWeek : t.plan.thisMonth}
           </div>
           <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.08, marginTop: 3 }}>{planName}</div>
         </div>
         <Link
           href="/library"
-          aria-label="Exercise Library"
+          aria-label={t.plan.libraryAria}
           style={{ flex: "none", width: 36, height: 36, borderRadius: 999, background: "var(--fill-resting)", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 6 }}
         >
           <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth={2} strokeLinecap="round">
@@ -74,7 +81,7 @@ export function PlanScreen({ planName, days, todayIdx, completedDayIds, complete
                 transition: "background .2s ease, color .2s ease",
               }}
             >
-              {v === "week" ? "Week" : "Month"}
+              {v === "week" ? t.plan.week : t.plan.month}
             </button>
           ))}
         </div>
@@ -83,7 +90,7 @@ export function PlanScreen({ planName, days, todayIdx, completedDayIds, complete
       {view === "month" && <MonthView days={days} completedDates={completedDates} />}
 
       <div style={{ padding: "4px 18px 0", display: view === "week" ? "flex" : "none", flexDirection: "column", gap: 10 }}>
-        {days.map((d) => {
+        {orderedDays.map((d) => {
           const isToday = d.day_of_week === todayIdx;
           const isDone = completedDayIds.includes(d.id);
           const inner = (
@@ -102,7 +109,7 @@ export function PlanScreen({ planName, days, todayIdx, completedDayIds, complete
             >
               <div style={{ width: 44, flexShrink: 0, textAlign: "center" }}>
                 <div style={{ fontSize: 12.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.02em", color: isToday ? "var(--blue)" : d.is_rest_day ? "var(--ink-faint)" : "var(--ink-dim)" }}>
-                  {DAY_LABELS[d.day_of_week]}
+                  {t.plan.dayShort[d.day_of_week]}
                 </div>
               </div>
               <div style={{ width: 1, alignSelf: "stretch", background: "var(--hairline)" }} />
@@ -111,34 +118,34 @@ export function PlanScreen({ planName, days, todayIdx, completedDayIds, complete
                   <svg width={17} height={17} viewBox="0 0 24 24">
                     <path d="M21 12.9A8.5 8.5 0 1 1 11.1 3.2 6.6 6.6 0 0 0 21 12.9Z" fill="var(--ink-faint)" />
                   </svg>
-                  <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--ink-dim)" }}>Rest day</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--ink-dim)" }}>{t.plan.restDay}</div>
                 </div>
               ) : (
                 <>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em" }}>{d.session_title}</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.01em" }}>{dayTitle(d.session_title)}</div>
                     <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
                       {d.focus_muscles.map((m) => (
                         <span key={m} style={{ fontSize: 11.5, fontWeight: 600, padding: "3px 9px", borderRadius: 999, background: "rgba(61,139,253,0.14)", color: "var(--blue)" }}>
-                          {m}
+                          {t.content.muscles[m] ?? m}
                         </span>
                       ))}
                     </div>
                   </div>
                   <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink-dim)", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
-                    {d.est_duration_min} min
+                    {t.common.min(d.est_duration_min ?? 45)}
                   </div>
                 </>
               )}
               {isDone && (
-                <div style={{ position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: 999, background: "var(--green)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ position: "absolute", top: -6, insetInlineEnd: -6, width: 22, height: 22, borderRadius: 999, background: "var(--green)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <svg width={13} height={13} viewBox="0 0 24 24">
                     <path d="M5 12.5l4.2 4.2L19 7" stroke="#0A0D12" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" fill="none" />
                   </svg>
                 </div>
               )}
               <button
-                aria-label="Day options"
+                aria-label={t.plan.dayOptionsAria}
                 onClick={(e) => {
                   e.preventDefault();
                   setMenuDay(d);
@@ -162,12 +169,12 @@ export function PlanScreen({ planName, days, todayIdx, completedDayIds, complete
           onClick={() => setConfirmRegen(true)}
           style={{ width: "100%", marginTop: 8, padding: 14, borderRadius: 12, background: "var(--fill-resting)", color: "var(--ink)", fontSize: 15, fontWeight: 700, transition: "transform .15s ease, background .15s ease" }}
         >
-          Regenerate week
+          {t.plan.regenerateWeek}
         </button>
       </div>
 
       {/* ⋯ sheet */}
-      <Sheet open={!!menuDay} onClose={() => setMenuDay(null)} title={menuDay ? DAY_LABELS[menuDay.day_of_week] : ""}>
+      <Sheet open={!!menuDay} onClose={() => setMenuDay(null)} title={menuDay ? t.plan.dayShort[menuDay.day_of_week] : ""}>
         {menuDay && !menuDay.is_rest_day && (
           <button
             disabled={pending}
@@ -179,25 +186,25 @@ export function PlanScreen({ planName, days, todayIdx, completedDayIds, complete
             }
             style={sheetRow()}
           >
-            Convert to rest day
+            {t.plan.convertToRest}
           </button>
         )}
         {menuDay && !menuDay.is_rest_day && (
-          <Link href={`/sessions/${menuDay.id}`} style={{ ...sheetRow(), display: "block", textAlign: "left" }}>
-            Edit session
+          <Link href={`/sessions/${menuDay.id}`} style={{ ...sheetRow(), display: "block", textAlign: "start" }}>
+            {t.plan.editSession}
           </Link>
         )}
         {menuDay?.is_rest_day && (
           <div style={{ padding: "14px 4px", fontSize: 14, color: "var(--ink-dim)" }}>
-            Rest day — use &ldquo;Regenerate week&rdquo; to reshuffle sessions.
+            {t.plan.restDayNote}
           </div>
         )}
       </Sheet>
 
       {/* Regenerate confirm */}
-      <Sheet open={confirmRegen} onClose={() => setConfirmRegen(false)} title="Regenerate this week?">
+      <Sheet open={confirmRegen} onClose={() => setConfirmRegen(false)} title={t.plan.regenTitle}>
         <div style={{ fontSize: 14, lineHeight: 1.5, color: "var(--ink-dim)", padding: "0 4px 14px" }}>
-          Replaces this week&rsquo;s remaining days. Completed days are kept.
+          {t.plan.regenBlurb}
         </div>
         <button
           disabled={pending}
@@ -209,17 +216,15 @@ export function PlanScreen({ planName, days, todayIdx, completedDayIds, complete
           }
           style={{ width: "100%", padding: 14, borderRadius: 12, background: "rgba(255,69,58,0.14)", color: "var(--red)", fontSize: 15, fontWeight: 700 }}
         >
-          {pending ? "Regenerating…" : "Regenerate"}
+          {pending ? t.plan.regenerating : t.plan.regenerate}
         </button>
         <button onClick={() => setConfirmRegen(false)} style={{ width: "100%", padding: 14, borderRadius: 12, background: "var(--fill-resting)", color: "var(--ink)", fontSize: 15, fontWeight: 700, marginTop: 8 }}>
-          Cancel
+          {t.common.cancel}
         </button>
       </Sheet>
     </main>
   );
 }
-
-const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 /** Monday-based weekday index (0=Mon..6=Sun). Kept local: lib/data is server-only. */
 function mondayIdx(d: Date): number {
@@ -236,23 +241,27 @@ function ymd(d: Date): string {
  */
 function MonthView({ days, completedDates }: { days: PlanDay[]; completedDates: string[] }) {
   const router = useRouter();
+  const { locale, t } = useI18n();
   const [offset, setOffset] = useState(0);
+  // Column order follows the locale's week start (Sunday-first for Hebrew);
+  // data stays Monday-indexed and is mapped into columns via this order.
+  const order = weekdayDisplayOrder(locale);
 
-  const { year, month, cells } = useMemo(() => {
+  const { monthDate, cells } = useMemo(() => {
     const base = new Date();
     base.setDate(1);
     base.setMonth(base.getMonth() + offset);
     const year = base.getFullYear();
     const month = base.getMonth();
-    const lead = mondayIdx(new Date(year, month, 1));
+    const lead = order.indexOf(mondayIdx(new Date(year, month, 1)));
     const count = new Date(year, month + 1, 0).getDate();
     const cells: (Date | null)[] = [
       ...Array.from({ length: lead }, () => null),
       ...Array.from({ length: count }, (_, i) => new Date(year, month, i + 1)),
     ];
     while (cells.length % 7 !== 0) cells.push(null);
-    return { year, month, cells };
-  }, [offset]);
+    return { monthDate: base, cells };
+  }, [offset, order]);
 
   const byWeekday = useMemo(() => new Map(days.map((d) => [d.day_of_week, d])), [days]);
   const doneSet = useMemo(() => new Set(completedDates.map((iso) => ymd(new Date(iso)))), [completedDates]);
@@ -263,22 +272,22 @@ function MonthView({ days, completedDates }: { days: PlanDay[]; completedDates: 
       <div style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 16, padding: "14px 12px 10px" }}>
         {/* Month switcher */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 6px 10px" }}>
-          <button aria-label="Previous month" onClick={() => setOffset((o) => o - 1)} style={monthNavBtn()}>
-            ‹
+          <button aria-label={t.plan.prevMonthAria} onClick={() => setOffset((o) => o - 1)} style={monthNavBtn()}>
+            <span className="dir-flip" style={{ display: "inline-block" }}>‹</span>
           </button>
           <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.01em" }}>
-            {MONTH_NAMES[month]} {year}
+            {formatDate(locale, monthDate, { month: "long", year: "numeric" })}
           </div>
-          <button aria-label="Next month" onClick={() => setOffset((o) => o + 1)} style={monthNavBtn()}>
-            ›
+          <button aria-label={t.plan.nextMonthAria} onClick={() => setOffset((o) => o + 1)} style={monthNavBtn()}>
+            <span className="dir-flip" style={{ display: "inline-block" }}>›</span>
           </button>
         </div>
 
         {/* Weekday header */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: 4 }}>
-          {["M", "T", "W", "T", "F", "S", "S"].map((l, i) => (
+          {order.map((i) => (
             <div key={i} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: "var(--ink-faint)", padding: "4px 0" }}>
-              {l}
+              {t.today.weekLetters[i]}
             </div>
           ))}
         </div>
@@ -296,7 +305,7 @@ function MonthView({ days, completedDates }: { days: PlanDay[]; completedDates: 
               <button
                 key={i}
                 onClick={() => planned && day && router.push(`/sessions/${day.id}`)}
-                aria-label={planned ? `${dateStr}: ${day?.session_title}` : `${dateStr}: rest day`}
+                aria-label={planned ? `${dateStr}: ${t.content.dayTitles[day?.session_title ?? ""] ?? day?.session_title}` : `${dateStr}: ${t.plan.restDay}`}
                 style={{
                   display: "flex",
                   flexDirection: "column",
@@ -343,8 +352,8 @@ function MonthView({ days, completedDates }: { days: PlanDay[]; completedDates: 
 
         {/* Legend */}
         <div style={{ display: "flex", justifyContent: "center", gap: 16, padding: "10px 0 4px" }}>
-          <LegendDot color="var(--blue)" label="Planned" />
-          <LegendDot color="var(--green)" label="Completed" />
+          <LegendDot color="var(--blue)" label={t.plan.legendPlanned} />
+          <LegendDot color="var(--green)" label={t.plan.legendCompleted} />
         </div>
       </div>
     </div>
@@ -375,5 +384,5 @@ function monthNavBtn(): React.CSSProperties {
 }
 
 function sheetRow(): React.CSSProperties {
-  return { width: "100%", textAlign: "left", padding: "14px 4px", fontSize: 16, fontWeight: 600, color: "var(--ink)", borderBottom: "1px solid var(--hairline)" };
+  return { width: "100%", textAlign: "start", padding: "14px 4px", fontSize: 16, fontWeight: 600, color: "var(--ink)", borderBottom: "1px solid var(--hairline)" };
 }

@@ -1,9 +1,11 @@
 import { requireProfile } from "@/lib/data";
 import { feedItemFrom, type ActivityEventRow, type FeedItem } from "@/lib/feed";
+import { getLocale } from "@/lib/i18n/server";
 import { FriendsScreen, type FriendCard } from "@/components/friends/FriendsScreen";
 
 export default async function FriendsPage() {
   const { supabase, user } = await requireProfile();
+  const locale = await getLocale();
 
   const [{ data: cards }, { data: feedRows }] = await Promise.all([
     supabase.rpc("friend_cards"),
@@ -37,6 +39,7 @@ export default async function FriendsPage() {
       f.created_at,
       ev,
       user.id,
+      locale,
       evBumps.length,
       evBumps.some((b) => b.from_user_id === user.id),
     );

@@ -1,9 +1,12 @@
 import { getActivePlan, mondayIndex, requireProfile } from "@/lib/data";
 import { feedItemFrom, type ActivityEventRow } from "@/lib/feed";
+import { getI18n } from "@/lib/i18n/server";
+import { formatDate } from "@/lib/i18n/format";
 import { TodayScreen, type WeekTileState } from "@/components/today/TodayScreen";
 
 export default async function TodayPage() {
   const { supabase, user, profile } = await requireProfile();
+  const { locale, t } = await getI18n();
   const plan = await getActivePlan(supabase, user.id);
 
   const now = new Date();
@@ -68,16 +71,16 @@ export default async function TodayPage() {
 
   // Next badge teaser: closest unearned milestone by total completed sessions
   const milestones = [
-    { at: 1, name: "First Rep" },
-    { at: 10, name: "10 Workouts" },
-    { at: 50, name: "50 Workouts" },
-    { at: 100, name: "100 Workouts" },
+    { at: 1, key: "first_rep" },
+    { at: 10, key: "10_workouts" },
+    { at: 50, key: "50_workouts" },
+    { at: 100, key: "100_workouts" },
   ];
   const next = milestones.find((m) => (totalSessions ?? 0) < m.at) ?? null;
 
   return (
     <TodayScreen
-      firstName={(profile.display_name ?? "there").split(" ")[0]}
+      firstName={(profile.display_name ?? t.today.fallbackName).split(" ")[0]}
       streak={streak?.current_streak ?? 0}
       todayDay={todayDay}
       todayLogStatus={(todayLog?.status as "in_progress" | "complete" | undefined) ?? null}
@@ -91,15 +94,21 @@ export default async function TodayPage() {
         return d.getDate();
       })}
       todayIdx={todayIdx}
-      badgeTeaser={next ? { name: next.name, toGo: next.at - (totalSessions ?? 0), frac: (totalSessions ?? 0) / next.at } : null}
+      badgeTeaser={
+        next
+          ? {
+              name: t.content.badges[next.key] ?? next.key,
+              toGo: next.at - (totalSessions ?? 0),
+              frac: (totalSessions ?? 0) / next.at,
+            }
+          : null
+      }
       feed={(feed ?? []).map((f) => {
         const ev = { id: f.event_id, ...(f.activity_events as object) } as ActivityEventRow;
-        const item = feedItemFrom(f.event_id, f.created_at, ev, user.id);
+        const item = feedItemFrom(f.event_id, f.created_at, ev, user.id, locale);
         return { name: item.name, text: item.text, when: item.when };
       })}
-      dateLabel={now
-        .toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })
-        .toUpperCase()}
+      dateLabel={formatDate(locale, now, { weekday: "long", month: "short", day: "numeric" }).toUpperCase()}
     />
   );
 }

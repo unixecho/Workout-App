@@ -114,8 +114,8 @@ export default async function StatsPage() {
     .sort((a, b) => Math.max(...b.points.map((p) => p.weight)) - Math.max(...a.points.map((p) => p.weight)))
     .slice(0, 6);
 
-  // History with day titles
-  const dayTitles = new Map((plan?.days ?? []).map((d) => [d.id, d.session_title ?? "Workout"]));
+  // History with day titles (client translates known titles per locale)
+  const dayTitles = new Map((plan?.days ?? []).map((d) => [d.id, d.session_title ?? ""]));
 
   return (
     <StatsScreen
@@ -140,8 +140,8 @@ export default async function StatsPage() {
       progression={progression}
       badges={{ earned: badgesEarned ?? 0, total: badgesTotal ?? 0 }}
       history={completed.slice(0, 8).map((l) => ({
-        title: dayTitles.get(l.plan_day_id) ?? "Workout",
-        date: new Date(l.started_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+        title: dayTitles.get(l.plan_day_id) ?? "",
+        at: l.started_at,
         minutes: Math.round((l.duration_seconds ?? 0) / 60),
       }))}
     />

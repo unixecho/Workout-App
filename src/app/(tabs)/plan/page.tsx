@@ -1,8 +1,10 @@
 import { getActivePlan, mondayIndex, requireProfile } from "@/lib/data";
+import { getI18n } from "@/lib/i18n/server";
 import { PlanScreen } from "@/components/plan/PlanScreen";
 
 export default async function PlanPage() {
   const { supabase, user } = await requireProfile();
+  const { t } = await getI18n();
   const plan = await getActivePlan(supabase, user.id);
 
   const { data: doneLogs } = await supabase
@@ -17,7 +19,7 @@ export default async function PlanPage() {
 
   return (
     <PlanScreen
-      planName={plan?.name ?? "My Plan"}
+      planName={plan?.name ? (t.content.planNames[plan.name] ?? plan.name) : t.plan.myPlan}
       days={plan?.days ?? []}
       todayIdx={mondayIndex(new Date())}
       completedDayIds={completedDayIds}

@@ -290,6 +290,11 @@ input[type="range"].stat-slider:active::-moz-range-thumb {
   }
 }
 
+/* Directional glyphs (chevrons, back arrows) mirror under RTL. */
+[dir="rtl"] .dir-flip {
+  transform: scaleX(-1);
+}
+
 /* Generic haptic-feeling tap state for chips/small buttons. */
 .press {
   transition:
